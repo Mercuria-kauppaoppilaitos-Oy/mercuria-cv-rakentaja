@@ -1,0 +1,22 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #172b3a;
+  background: #f4f7fa;
+  line-height: 1.6;
+  font-synthesis: none;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+header, main, footer { width: min(100% - 2rem, 64rem); margin-inline: auto; }
+header { padding-block: 1.5rem; font-weight: 700; overflow-wrap: anywhere; }
+main { padding-block: clamp(2rem, 7vw, 5rem); }
+h1 { font-size: clamp(2rem, 5vw, 3.5rem); line-height: 1.15; max-width: 20ch; }
+p { max-width: 65ch; }
+.eyebrow { color: #275a70; font-weight: 700; }
+section { background: #fff; border: 1px solid #cad7df; border-radius: 1rem; padding: clamp(1rem, 4vw, 2rem); margin-top: 2rem; }
+button { font: inherit; font-weight: 700; background: #174e63; color: #fff; border: 0; border-radius: .5rem; padding: .75rem 1.25rem; min-height: 44px; cursor: pointer; }
+button:hover { background: #103b4c; }
+:focus-visible { outline: 3px solid #a34b00; outline-offset: 4px; }
+.skip-link { position: absolute; left: 1rem; top: -10rem; background: #fff; color: #172b3a; padding: 1rem; }
+.skip-link:focus { top: 1rem; }
+footer { padding-block: 2rem; }
