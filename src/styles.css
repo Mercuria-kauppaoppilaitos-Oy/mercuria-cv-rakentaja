@@ -2,7 +2,11 @@
 * { box-sizing: border-box; }
 body { margin: 0; }
 h1, h2, h3, h4, p { margin: 0; }
-input, textarea { font: inherit; }
+input, textarea, select { font: inherit; }
+.reference-display { margin-bottom: 1.25rem; }
+.compact-entry .field-grid { gap: .75rem; }
+.cv-history > ul { padding-left: 1.3em; margin: 0; }
+.cv-history > ul > li { break-inside: avoid; }
 button { font: inherit; min-height: 44px; padding: .6rem 1rem; border: 1px solid #aabbb2; border-radius: .45rem; cursor: pointer; }
 .add-button { background: #204e43; color: #fff; border-color: #204e43; }
 .add-button:hover { background: #173d34; }
@@ -45,7 +49,7 @@ legend { padding: 0; font-weight: 700; margin-bottom: 1rem; font-size: 1rem; }
 .field { min-width: 0; }
 .field-wide { grid-column: 1 / -1; }
 label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: .4rem; }
-input, textarea { width: 100%; min-height: 2.9rem; padding: .7rem .8rem; border: 1px solid #aabbb2; border-radius: .45rem; color: #243b3a; background: #fff; }
+input, textarea, select { width: 100%; min-height: 2.9rem; padding: .7rem .8rem; border: 1px solid #aabbb2; border-radius: .45rem; color: #243b3a; background: #fff; }
 input::placeholder, textarea::placeholder { color: #6f7974; opacity: 1; }
 textarea { resize: vertical; display: block; }
 input:hover, textarea:hover { border-color: #4f7566; }

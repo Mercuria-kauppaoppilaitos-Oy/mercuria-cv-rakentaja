@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import type { CvData } from './cv-model';
 import { CvHistoryPreview } from './CvHistoryPreview';
+import { CvAdditionalPreview } from './CvAdditionalPreview';
 
 function PreviewText({ value, example }: { value: string; example: string }) {
   return <span className={value.trim() ? undefined : 'example-text'}>{value.trim() || example}</span>;
@@ -27,6 +28,7 @@ export function CvPreview({ data }: { data: CvData }) {
         </section>
         <CvHistoryPreview entries={data.workExperience} heading="TYÖKOKEMUS" id="cv-work-title" />
         <CvHistoryPreview entries={data.education} heading="KOULUTUS" id="cv-education-title" />
+        <CvAdditionalPreview data={data} />
       </article>
     </section>
   );

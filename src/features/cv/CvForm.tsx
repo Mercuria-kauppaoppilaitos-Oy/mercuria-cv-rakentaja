@@ -1,6 +1,7 @@
 import type { UseFormReturn } from 'react-hook-form';
 import type { CvData } from './cv-model';
 import { CvHistoryFields } from './CvHistoryFields';
+import { CvAdditionalFields } from './CvAdditionalFields';
 
 type PersonalField = keyof CvData['personalDetails'];
 const fields: { name: PersonalField; label: string; placeholder: string; type?: 'email' | 'tel' | 'url'; autoComplete?: string }[] = [
@@ -35,6 +36,11 @@ export function CvForm({ form }: { form: UseFormReturn<CvData> }) {
         </fieldset>
         <CvHistoryFields form={form} name="workExperience" />
         <CvHistoryFields form={form} name="education" />
+        <CvAdditionalFields form={form} name="skills" />
+        <CvAdditionalFields form={form} name="digitalSkills" />
+        <CvAdditionalFields form={form} name="languages" />
+        <CvAdditionalFields form={form} name="certifications" />
+        <CvAdditionalFields form={form} name="references" />
       </form>
     </section>
   );
