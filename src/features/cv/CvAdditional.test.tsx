@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+﻿import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { App } from '../../App';
+import { addEntry, selectStep } from '../../test/navigation';
 import { digitalLevels, languageLevels } from './cv-model';
 
 const cases = [
@@ -18,7 +19,7 @@ describe('Uudet CV-osiot', () => {
   it.each(cases)('lisää merkinnän osioon $heading ja päivittää esikatselun', async (section) => {
     const user = userEvent.setup();
     render(<App />);
-    await user.click(screen.getByRole('button', { name: section.add }));
+    await addEntry(user, section.add);
     await user.type(entry(section.entry).getByLabelText(section.field), section.value);
     expect(preview().getByRole('heading', { name: section.heading })).toBeVisible();
     expect(preview().getByText(section.value)).toBeVisible();
@@ -27,9 +28,9 @@ describe('Uudet CV-osiot', () => {
   it.each(cases)('poistaa valitun merkinnän osiosta $heading ja säilyttää toisen', async (section) => {
     const user = userEvent.setup();
     render(<App />);
-    await user.click(screen.getByRole('button', { name: section.add }));
+    await addEntry(user, section.add);
     await user.type(entry(section.entry).getByLabelText(section.field), section.value);
-    await user.click(screen.getByRole('button', { name: section.add }));
+    await addEntry(user, section.add);
     await user.type(entry(section.entry, 2).getByLabelText(section.field), 'Toinen');
     await user.click(screen.getByRole('button', { name: `${section.remove} 1: ${section.value}` }));
     expect(preview().queryByText(section.value)).not.toBeInTheDocument();
@@ -47,9 +48,10 @@ describe('Uudet CV-osiot', () => {
     const { container } = render(<App />);
     for (const section of cases) {
       expect(preview().queryByRole('heading', { name: section.heading })).not.toBeInTheDocument();
-      await user.click(screen.getByRole('button', { name: section.add }));
+      await addEntry(user, section.add);
       await user.type(entry(section.entry).getByLabelText(section.field), '   ');
     }
+    await selectStep(user, 'Osaaminen');
     await user.selectOptions(entry('Digitaito').getByRole('combobox'), 'Hyvä');
     await user.selectOptions(entry('Kieli').getByRole('combobox'), 'Sujuva');
     for (const section of cases) expect(preview().queryByRole('heading', { name: section.heading })).not.toBeInTheDocument();
@@ -61,7 +63,7 @@ describe('Uudet CV-osiot', () => {
   it('näyttää kaikki digitaito- ja kielitasot tekstinä ja sallii digitaitotason tyhjäksi', async () => {
     const user = userEvent.setup();
     render(<App />);
-    await user.click(screen.getByRole('button', { name: 'Lisää digitaito' }));
+    await addEntry(user, 'Lisää digitaito');
     await user.type(entry('Digitaito').getByLabelText('Ohjelman tai järjestelmän nimi'), 'Microsoft Excel');
     expect(preview().getByText('Microsoft Excel')).toBeVisible();
     for (const level of digitalLevels) {
@@ -70,7 +72,7 @@ describe('Uudet CV-osiot', () => {
     }
     await user.selectOptions(entry('Digitaito').getByRole('combobox'), '');
     expect(preview().getByText('Microsoft Excel')).toBeVisible();
-    await user.click(screen.getByRole('button', { name: 'Lisää kieli' }));
+    await addEntry(user, 'Lisää kieli');
     await user.type(entry('Kieli').getByLabelText('Kieli'), 'Englanti');
     for (const level of languageLevels) {
       await user.selectOptions(entry('Kieli').getByRole('combobox'), level);
@@ -81,11 +83,12 @@ describe('Uudet CV-osiot', () => {
   it('toteuttaa kaikki kolme suosittelijoiden näyttötapaa tietoja menettämättä', async () => {
     const user = userEvent.setup();
     render(<App />);
+    await selectStep(user, 'Lisäosiot');
     expect(screen.getByText('Pyydä henkilöltä lupa ennen kuin lisäät hänet suosittelijaksi.')).toBeVisible();
     const display = screen.getByLabelText('Suosittelijoiden näyttötapa');
     await user.selectOptions(display, 'on-request');
     expect(preview().getByText('Suosittelijat saatavilla pyydettäessä')).toBeVisible();
-    await user.click(screen.getByRole('button', { name: 'Lisää suosittelija' }));
+    await addEntry(user, 'Lisää suosittelija');
     await user.type(entry('Suosittelija').getByLabelText('Nimi'), 'Meri');
     await user.type(entry('Suosittelija').getByLabelText('Tehtävänimike'), 'Esihenkilö');
     await user.type(entry('Suosittelija').getByLabelText('Organisaatio'), 'Kauppa');
@@ -108,7 +111,7 @@ describe('Uudet CV-osiot', () => {
   it('validoi suosittelijan sähköpostin ja kytkee virheen saavutettavasti kenttään', async () => {
     const user = userEvent.setup();
     render(<App />);
-    await user.click(screen.getByRole('button', { name: 'Lisää suosittelija' }));
+    await addEntry(user, 'Lisää suosittelija');
     const email = entry('Suosittelija').getByLabelText('Sähköpostiosoite (valinnainen)');
     await user.type(email, 'virhe');
     expect(await screen.findByRole('alert')).toHaveTextContent('Tarkista sähköpostiosoitteen muoto.');
@@ -124,7 +127,7 @@ describe('Uudet CV-osiot', () => {
   it('hyväksyy tyhjän tai nelinumeroisen suoritusvuoden ja näyttää pätevyyden lisätiedot', async () => {
     const user = userEvent.setup();
     render(<App />);
-    await user.click(screen.getByRole('button', { name: 'Lisää kortti tai pätevyys' }));
+    await addEntry(user, 'Lisää kortti tai pätevyys');
     const certificate = entry('Kortti tai pätevyys');
     await user.type(certificate.getByLabelText('Nimi'), 'Ensiapukoulutus');
     await user.type(certificate.getByLabelText('Myöntäjä tai koulutuksen järjestäjä (valinnainen)'), 'SPR');
@@ -145,12 +148,12 @@ describe('Uudet CV-osiot', () => {
   it('näyttää kaikki CV-osiot pyydetyssä järjestyksessä', async () => {
     const user = userEvent.setup();
     render(<App />);
-    await user.click(screen.getByRole('button', { name: 'Lisää työkokemus' }));
+    await addEntry(user, 'Lisää työkokemus');
     await user.type(entry('Työkokemus').getByLabelText('Tehtävänimike tai kokemuksen tyyppi'), 'Myyjä');
-    await user.click(screen.getByRole('button', { name: 'Lisää koulutus' }));
+    await addEntry(user, 'Lisää koulutus');
     await user.type(entry('Koulutus').getByLabelText('Tutkinnon tai koulutuksen nimi'), 'Merkonomi');
     for (const section of cases) {
-      await user.click(screen.getByRole('button', { name: section.add }));
+      await addEntry(user, section.add);
       await user.type(entry(section.entry).getByLabelText(section.field), section.value);
     }
     expect(preview().getAllByRole('heading', { level: 4 }).map((heading) => heading.textContent)).toEqual([

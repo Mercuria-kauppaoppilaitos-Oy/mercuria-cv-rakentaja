@@ -2,17 +2,20 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { App } from './App';
+import { selectStep } from './test/navigation';
 
 describe('CV-rakentaja', () => {
-  it('näyttää keskeiset otsikot ja tietosuojatiedon', () => {
+  it('näyttää keskeiset otsikot ja tietosuojatiedon', async () => {
+    const user = userEvent.setup();
     render(<App />);
     expect(screen.getByText('Mercuria CV')).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Hyvä CV alkaa sinusta.' })).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Muokkaa tietojasi' })).toBeVisible();
     expect(screen.getByRole('heading', { name: 'CV-esikatselu' })).toBeVisible();
     expect(screen.getByRole('group', { name: 'Perustiedot' })).toBeVisible();
+    await selectStep(user, 'Esittely');
     expect(screen.getByRole('group', { name: 'Esittelyteksti' })).toBeVisible();
-    expect(screen.getByRole('heading', { name: 'Esittely' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Esittely', level: 4 })).toBeVisible();
     expect(screen.getByText('Tietosi käsitellään tällä laitteella eikä niitä lähetetä palvelimelle.')).toBeVisible();
   });
 
@@ -27,6 +30,7 @@ describe('CV-rakentaja', () => {
     ] as const;
     const preview = within(screen.getByRole('article', { name: 'Ansioluettelon esikatselu' }));
     for (const [label, value] of values) {
+      if (label === 'Esittely') await selectStep(user, 'Esittely');
       await user.type(screen.getByRole('textbox', { name: label }), value);
       if (label === 'Etunimi' || label === 'Sukunimi') {
         expect(preview.getByRole('heading', { name: label === 'Etunimi' ? 'Meri' : 'Meri Virtanen' })).toBeVisible();

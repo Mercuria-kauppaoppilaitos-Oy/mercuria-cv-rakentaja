@@ -2,6 +2,8 @@ import type { UseFormReturn } from 'react-hook-form';
 import type { CvData } from './cv-model';
 import { CvHistoryFields } from './CvHistoryFields';
 import { CvAdditionalFields } from './CvAdditionalFields';
+import { CvFinish } from './CvFinish';
+import { cvSteps } from './cv-steps';
 
 type PersonalField = keyof CvData['personalDetails'];
 const fields: { name: PersonalField; label: string; placeholder: string; type?: 'email' | 'tel' | 'url'; autoComplete?: string }[] = [
@@ -13,13 +15,14 @@ const fields: { name: PersonalField; label: string; placeholder: string; type?: 
   { name: 'city', label: 'Paikkakunta', placeholder: 'Vantaa', autoComplete: 'address-level2' },
   { name: 'linkedIn', label: 'LinkedIn', placeholder: 'https://www.linkedin.com/in/aino-esimerkki', type: 'url' },
 ];
-export function CvForm({ form }: { form: UseFormReturn<CvData> }) {
+export function CvForm({ form, data, activeStep, onSelect }: { form: UseFormReturn<CvData>; data: CvData; activeStep: number; onSelect: (step: number) => void }) {
   const { register, formState: { errors } } = form;
   return (
     <section className="editor panel" aria-labelledby="editor-title">
       <div className="panel-heading"><p className="eyebrow">OMA CV:SI</p><h2 id="editor-title">Muokkaa tietojasi</h2><p>Kaikki kentät ovat vapaaehtoisia. Esikatselu päivittyy kirjoittaessasi.</p></div>
+      <h3 className="active-step-heading" tabIndex={-1} id="active-step-heading">{cvSteps[activeStep]}</h3>
       <form noValidate onSubmit={(event) => event.preventDefault()}>
-        <fieldset><legend>Perustiedot</legend><div className="field-grid">
+        {activeStep === 0 && <fieldset><legend>Perustiedot</legend><div className="field-grid">
           {fields.map((field) => {
             const error = errors.personalDetails?.[field.name];
             return <div className={`field ${field.name === 'firstName' || field.name === 'lastName' ? '' : 'field-wide'}`} key={field.name}>
@@ -28,19 +31,29 @@ export function CvForm({ form }: { form: UseFormReturn<CvData> }) {
               {error && <p className="field-error" id={`${field.name}-error`} role="alert">{error.message}</p>}
             </div>;
           })}
-        </div></fieldset>
-        <fieldset className="summary-fields"><legend>Esittelyteksti</legend>
+        </div></fieldset>}
+        {activeStep === 1 && <fieldset className="summary-fields"><legend>Esittelyteksti</legend>
           <p id="summary-help" className="field-help">Kerro lyhyesti vahvuuksistasi, osaamisestasi ja tavoitteistasi.</p>
           <label htmlFor="summary">Esittely</label>
           <textarea id="summary" rows={6} placeholder="Olen palveluhenkinen ja huolellinen ammattilainen…" aria-describedby="summary-help" {...register('summary')} />
-        </fieldset>
-        <CvHistoryFields form={form} name="workExperience" />
-        <CvHistoryFields form={form} name="education" />
-        <CvAdditionalFields form={form} name="skills" />
-        <CvAdditionalFields form={form} name="digitalSkills" />
-        <CvAdditionalFields form={form} name="languages" />
-        <CvAdditionalFields form={form} name="certifications" />
-        <CvAdditionalFields form={form} name="references" />
+        </fieldset>}
+        {activeStep === 2 && <CvHistoryFields key="workExperience" form={form} name="workExperience" />}
+        {activeStep === 3 && <CvHistoryFields key="education" form={form} name="education" />}
+        {activeStep === 4 && <>
+          <CvAdditionalFields key="skills" form={form} name="skills" />
+          <CvAdditionalFields key="digitalSkills" form={form} name="digitalSkills" />
+          <CvAdditionalFields key="languages" form={form} name="languages" />
+        </>}
+        {activeStep === 5 && <>
+          <CvAdditionalFields key="certifications" form={form} name="certifications" />
+          <CvAdditionalFields key="references" form={form} name="references" />
+        </>}
+        {activeStep === 6 && <CvFinish data={data} />}
+        <div className="step-actions">
+          <button type="button" disabled={activeStep === 0} onClick={() => onSelect(activeStep - 1)}>Edellinen</button>
+          <span>{activeStep + 1} / {cvSteps.length}</span>
+          <button className="add-button" type="button" disabled={activeStep === cvSteps.length - 1} onClick={() => onSelect(activeStep + 1)}>Seuraava</button>
+        </div>
       </form>
     </section>
   );
