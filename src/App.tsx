@@ -1,23 +1,21 @@
-import { useState } from 'react';
-import { increment } from './counter';
+﻿import { useForm, useWatch } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { CvForm } from './features/cv/CvForm';
+import { CvPreview } from './features/cv/CvPreview';
+import { createEmptyCv, cvSchema, type CvData } from './features/cv/cv-model';
 
 export function App() {
-  const [count, setCount] = useState(0);
+  const form = useForm<CvData>({ defaultValues: createEmptyCv(), resolver: zodResolver(cvSchema), mode: 'onChange' });
+  const data = useWatch({ control: form.control }) as CvData;
   return (
     <>
       <a className="skip-link" href="#main">Siirry sisältöön</a>
-      <header><span>mercuria-cv</span></header>
+      <header className="site-header"><div className="header-inner"><span className="brand">Mercuria CV</span><span className="header-caption">Osaamisesi näkyväksi</span></div></header>
       <main id="main" tabIndex={-1}>
-        <p className="eyebrow">Valmiina ensimmäiseen ideaan</p>
-        <h1>Tervetuloa uuteen projektiisi</h1>
-        <p>Muokkaa aloitusnäkymää tiedostossa src/App.tsx ja aloita rakentaminen.</p>
-        <section aria-labelledby="example-title">
-          <h2 id="example-title">Kokeile sovellusta</h2>
-          <p role="status">Painalluksia: {count}</p>
-          <button type="button" onClick={() => setCount(increment)}>Lisää painallus</button>
-        </section>
+        <div className="intro"><p className="eyebrow">SEURAAVA ASKEL URALLASI</p><h1>Hyvä CV alkaa sinusta.</h1><p>Kokoa perustietosi ja kerro, mitä osaat. Näet ansioluettelosi muotoutuvan heti.</p><p className="privacy-note">Tietosi käsitellään tällä laitteella eikä niitä lähetetä palvelimelle.</p></div>
+        <div className="builder-layout"><CvForm form={form} /><CvPreview data={data} /></div>
       </main>
-      <footer>Rakennettu Reactilla ja TypeScriptillä.</footer>
+      <footer>Tiedot säilyvät vain avoimessa näkymässä. Sivun uudelleenlataus tyhjentää ne.</footer>
     </>
   );
 }
