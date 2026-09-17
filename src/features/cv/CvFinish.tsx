@@ -23,6 +23,6 @@ export function CvFinish({ data }: { data: CvData }) {
     <dl>{sections.map(([label, status]) => <div key={label}><dt>{label}</dt><dd>{status}</dd></div>)}</dl>
     {!validation.success && <div className="validation-summary" role="alert"><p>Korjaa vielä seuraavat tiedot:</p><ul>{validation.error.issues.map((issue, index) => <li key={index}>{issue.message}</li>)}</ul></div>}
     <p className="pdf-note">PDF-lataus lisätään seuraavassa vaiheessa.</p>
-    <p className="field-help">Tiedot säilyvät vain avoimessa näkymässä. Sivun uudelleenlataus tyhjentää ne.</p>
+    <p className="field-help">Luonnos säilyy oletuksena selaimen istunnossa. Pysyvä tallennus tapahtuu vain omalla valinnallasi.</p>
   </section>;
 }

@@ -8,7 +8,8 @@ describe('CV-rakentaja', () => {
   it('näyttää keskeiset otsikot ja tietosuojatiedon', async () => {
     const user = userEvent.setup();
     render(<App />);
-    expect(screen.getByText('Mercuria CV')).toBeVisible();
+    expect(screen.getByRole('img', { name: 'Mercuria' })).toBeVisible();
+    expect(screen.getByText('CV-rakentaja')).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Hyvä CV alkaa sinusta.' })).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Muokkaa tietojasi' })).toBeVisible();
     expect(screen.getByRole('heading', { name: 'CV-esikatselu' })).toBeVisible();

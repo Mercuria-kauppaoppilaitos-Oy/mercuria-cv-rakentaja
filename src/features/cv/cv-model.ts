@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { defaultAccentColor } from './color-utils';
 
 const optionalEmail = z.union([z.literal(''), z.email('Tarkista sähköpostiosoitteen muoto.')]);
 const optionalLinkedIn = z.string().refine((value) => {
@@ -24,7 +25,12 @@ export const cvSchema = z.object({
   references: z.array(z.object({ id: z.string(), name: z.string(), title: z.string(), organization: z.string(), email: optionalEmail, phone: z.string() })),
   referencesDisplay: z.enum(['contact', 'on-request', 'hidden']),
   template: z.literal('single-column'),
-  appearance: z.object({ fontFamily: z.enum(['sans-serif', 'serif']), fontSize: z.number().positive(), lineHeight: z.number().positive() }),
+  appearance: z.object({
+    fontFamily: z.enum(['sans-serif', 'serif']), fontSize: z.number().positive().max(30), lineHeight: z.number().positive().max(3),
+    accentColor: z.string().regex(/^#[\da-f]{6}$/i, 'Anna väri muodossa #RRGGBB.'),
+    photoDataUrl: z.string().max(560000).regex(/^$|^data:image\/(jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/, 'Kuvan tiedot eivät kelpaa.'),
+    photoPositionX: z.number().min(0).max(100), photoPositionY: z.number().min(0).max(100),
+  }),
 });
 export type CvData = z.infer<typeof cvSchema>;
 export type AdditionalSection = 'skills' | 'digitalSkills' | 'languages' | 'certifications' | 'references';
@@ -48,6 +54,6 @@ export function createEmptyCv(): CvData {
   return {
     personalDetails: { firstName: '', lastName: '', professionalTitle: '', email: '', phone: '', city: '', linkedIn: '' },
     summary: '', workExperience: [], education: [], skills: [], digitalSkills: [], languages: [], certifications: [], references: [], referencesDisplay: 'contact',
-    template: 'single-column', appearance: { fontFamily: 'sans-serif', fontSize: 11, lineHeight: 1.6 },
+    template: 'single-column', appearance: { fontFamily: 'sans-serif', fontSize: 11, lineHeight: 1.6, accentColor: defaultAccentColor, photoDataUrl: '', photoPositionX: 50, photoPositionY: 50 },
   };
 }

@@ -4,6 +4,9 @@ import { CvHistoryFields } from './CvHistoryFields';
 import { CvAdditionalFields } from './CvAdditionalFields';
 import { CvFinish } from './CvFinish';
 import { cvSteps } from './cv-steps';
+import { CvAppearanceControls } from './CvAppearanceControls';
+import { CvPhotoUpload } from './CvPhotoUpload';
+import { CvDraftControls, type DraftControls } from './CvDraftControls';
 
 type PersonalField = keyof CvData['personalDetails'];
 const fields: { name: PersonalField; label: string; placeholder: string; type?: 'email' | 'tel' | 'url'; autoComplete?: string }[] = [
@@ -15,7 +18,7 @@ const fields: { name: PersonalField; label: string; placeholder: string; type?: 
   { name: 'city', label: 'Paikkakunta', placeholder: 'Vantaa', autoComplete: 'address-level2' },
   { name: 'linkedIn', label: 'LinkedIn', placeholder: 'https://www.linkedin.com/in/aino-esimerkki', type: 'url' },
 ];
-export function CvForm({ form, data, activeStep, onSelect }: { form: UseFormReturn<CvData>; data: CvData; activeStep: number; onSelect: (step: number) => void }) {
+export function CvForm({ form, data, activeStep, onSelect, draftControls }: { form: UseFormReturn<CvData>; data: CvData; activeStep: number; onSelect: (step: number) => void; draftControls: DraftControls }) {
   const { register, formState: { errors } } = form;
   return (
     <section className="editor panel" aria-labelledby="editor-title">
@@ -32,6 +35,7 @@ export function CvForm({ form, data, activeStep, onSelect }: { form: UseFormRetu
             </div>;
           })}
         </div></fieldset>}
+        {activeStep === 0 && <CvPhotoUpload form={form} appearance={data.appearance} />}
         {activeStep === 1 && <fieldset className="summary-fields"><legend>Esittelyteksti</legend>
           <p id="summary-help" className="field-help">Kerro lyhyesti vahvuuksistasi, osaamisestasi ja tavoitteistasi.</p>
           <label htmlFor="summary">Esittely</label>
@@ -48,7 +52,11 @@ export function CvForm({ form, data, activeStep, onSelect }: { form: UseFormRetu
           <CvAdditionalFields key="certifications" form={form} name="certifications" />
           <CvAdditionalFields key="references" form={form} name="references" />
         </>}
-        {activeStep === 6 && <CvFinish data={data} />}
+        {activeStep === 6 && <>
+          <CvAppearanceControls form={form} appearance={data.appearance} />
+          <CvDraftControls {...draftControls} />
+          <CvFinish data={data} />
+        </>}
         <div className="step-actions">
           <button type="button" disabled={activeStep === 0} onClick={() => onSelect(activeStep - 1)}>Edellinen</button>
           <span>{activeStep + 1} / {cvSteps.length}</span>
