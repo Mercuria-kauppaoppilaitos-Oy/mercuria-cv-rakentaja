@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { CvData } from './cv-model';
+import { CvHistoryPreview } from './CvHistoryPreview';
 
 function PreviewText({ value, example }: { value: string; example: string }) {
   return <span className={value.trim() ? undefined : 'example-text'}>{value.trim() || example}</span>;
@@ -24,6 +25,8 @@ export function CvPreview({ data }: { data: CvData }) {
         <section className="cv-summary" aria-labelledby="cv-summary-title"><h4 id="cv-summary-title">Esittely</h4>
           <p><PreviewText value={data.summary} example="Olen palveluhenkinen ja huolellinen ammattilainen. Vahvuuksiani ovat sujuva asiakaspalvelu, yhteistyö ja halu oppia uutta. Etsin tehtävää, jossa voin hyödyntää osaamistani ja kehittyä." /></p>
         </section>
+        <CvHistoryPreview entries={data.workExperience} heading="TYÖKOKEMUS" id="cv-work-title" />
+        <CvHistoryPreview entries={data.education} heading="KOULUTUS" id="cv-education-title" />
       </article>
     </section>
   );

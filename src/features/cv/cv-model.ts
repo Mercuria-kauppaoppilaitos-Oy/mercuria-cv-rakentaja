@@ -14,7 +14,7 @@ export const cvSchema = z.object({
   personalDetails: z.object({ firstName: z.string(), lastName: z.string(), professionalTitle: z.string(), email: optionalEmail, phone: z.string(), city: z.string(), linkedIn: optionalLinkedIn }),
   summary: z.string(),
   workExperience: z.array(dateRangeSchema.extend({ id: z.string(), employer: z.string(), title: z.string(), location: z.string(), description: z.string() })),
-  education: z.array(dateRangeSchema.extend({ id: z.string(), institution: z.string(), qualification: z.string(), description: z.string() })),
+  education: z.array(dateRangeSchema.extend({ id: z.string(), institution: z.string(), qualification: z.string(), location: z.string(), description: z.string() })),
   skills: z.array(z.object({ id: z.string(), name: z.string() })),
   digitalSkills: z.array(z.object({ id: z.string(), name: z.string(), description: z.string() })),
   languages: z.array(z.object({ id: z.string(), name: z.string(), proficiency: z.string() })),
@@ -24,6 +24,12 @@ export const cvSchema = z.object({
   appearance: z.object({ fontFamily: z.enum(['sans-serif', 'serif']), fontSize: z.number().positive(), lineHeight: z.number().positive() }),
 });
 export type CvData = z.infer<typeof cvSchema>;
+export function createEmptyWorkExperience(): CvData['workExperience'][number] {
+  return { id: crypto.randomUUID(), title: '', employer: '', location: '', startDate: '', endDate: '', isCurrent: false, description: '' };
+}
+export function createEmptyEducation(): CvData['education'][number] {
+  return { id: crypto.randomUUID(), qualification: '', institution: '', location: '', startDate: '', endDate: '', isCurrent: false, description: '' };
+}
 export function createEmptyCv(): CvData {
   return {
     personalDetails: { firstName: '', lastName: '', professionalTitle: '', email: '', phone: '', city: '', linkedIn: '' },
