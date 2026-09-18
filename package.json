@@ -8,7 +8,8 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "dev:full": "vercel dev --local --listen 127.0.0.1:3000",
+    "build": "tsc --noEmit && vite build && node scripts/check-client-build.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
@@ -22,6 +23,7 @@
     "@hookform/resolvers": "^5.9.1",
     "@react-pdf/renderer": "^4.9.0",
     "buffer": "^6.0.3",
+    "openai": "^7.18.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-easy-crop": "^6.2.3",
@@ -40,6 +42,7 @@
     "jsdom": "^30.1.0",
     "pdfjs-dist": "^6.3.289",
     "typescript": "~5.9.3",
+    "vercel": "^59.23.1",
     "vite": "^8.0.0",
     "vitest": "^4.1.11"
   }

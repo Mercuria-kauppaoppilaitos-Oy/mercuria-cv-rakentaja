@@ -226,3 +226,14 @@ button:disabled { cursor: default; opacity: .5; }
 .cv-history > .cv-compact-list { list-style: none; padding-left: 0; }
 .cv-metadata { font-size: 10.5pt; color: var(--cv-muted); margin-top: var(--cv-metadata-gap, .5mm); }
 .cv-page p { orphans: 2; widows: 2; }
+
+.text-rewrite { margin-top: .75rem; min-width: 0; }
+.text-rewrite > button { margin-top: .5rem; }
+.rewrite-error { margin-top: .5rem; }
+.rewrite-error:empty { margin: 0; }
+.rewrite-proposal { margin-top: 1rem; padding: 1rem; background: #eff6fb; border: 1px solid #7b99ae; border-radius: .5rem; }
+.rewrite-proposal h4 { font-size: 1.1rem; }
+.rewrite-proposal h5 { font-size: 1rem; margin-top: .75rem; }
+.rewrite-copy { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: .25rem; }
+.rewrite-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
+.rewrite-actions button { max-width: 100%; white-space: normal; }

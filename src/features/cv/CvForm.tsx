@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { CvAtsReview } from './ats/CvAtsReview';
+import { CvTextRewrite } from './ai/CvTextRewrite';
 import type { CvData } from './cv-model';
 import { CvHistoryFields } from './CvHistoryFields';
 import { CvAdditionalFields } from './CvAdditionalFields';
@@ -44,6 +45,7 @@ export function CvForm({ form, data, activeStep, onSelect, draftControls }: { fo
           <p id="summary-help" className="field-help">Kerro lyhyesti vahvuuksistasi, osaamisestasi ja tavoitteistasi.</p>
           <label htmlFor="summary">Esittely</label>
           <textarea id="summary" rows={6} placeholder="Olen palveluhenkinen ja huolellinen ammattilainen…" aria-describedby="summary-help" {...register('summary')} />
+          <CvTextRewrite form={form} textType="profile" sourceText={data.summary} />
         </fieldset>}
         {activeStep === 2 && <CvHistoryFields key="workExperience" form={form} name="workExperience" />}
         {activeStep === 3 && <CvHistoryFields key="education" form={form} name="education" />}

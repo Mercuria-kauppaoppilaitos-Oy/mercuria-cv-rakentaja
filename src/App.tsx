@@ -42,7 +42,7 @@ export function App() {
       <a className="skip-link" href="#main">Siirry sisältöön</a>
       <header className="site-header" inert={clearOpen}>
         <div className="brand"><img src={mercuriaLogo} alt="Mercuria" /><span>CV-rakentaja</span></div>
-        <p className="privacy-note">Tietosi käsitellään tällä laitteella eikä niitä lähetetä palvelimelle.</p>
+        <p className="privacy-note">CV-tiedot säilyvät normaalisti tällä laitteella. Vapaaehtoinen tekoälyjalostus lähettää vain valitun tekstin ja mahdollisen tehtävänimikkeen tekoälypalvelulle.</p>
       </header>
       <main id="main" tabIndex={-1} inert={clearOpen} className={`workspace ${previewHidden ? 'preview-hidden' : ''}`}>
         <CvStepNavigation activeStep={activeStep} onSelect={selectStep} mobile={mobile} />
@@ -52,7 +52,7 @@ export function App() {
         </div>
         <div id="form-panel" className="form-column" hidden={mobile && mobileView !== 'form'}>
           <div className="intro"><p className="eyebrow">SEURAAVA ASKEL URALLASI</p><h1>Hyvä CV alkaa sinusta.</h1></div>
-          <details className="privacy-details"><summary>Tietosuoja ja luonnoksen säilyminen</summary><p>Tiedot ja valokuva käsitellään selaimessa eikä niitä lähetetä palvelimelle. Kuva pienennetään selaimessa. Istuntoluonnos suojaa sivun vahinkopäivitykseltä. Pysyvä tallennus tapahtuu vain käyttäjän valinnalla eikä sitä suositella yhteiskäyttöisellä laitteella. Voit poistaa kaikki tiedot Viimeistele-vaiheessa.</p></details>
+          <details className="privacy-details"><summary>Tietosuoja ja luonnoksen säilyminen</summary><p>CV-tiedot säilyvät normaalisti tällä laitteella. Tekoälytoimintoa käytettäessä vain käsiteltäväksi valitsemasi kentän teksti ja mahdollinen tehtävänimike lähetetään tekoälypalvelulle. Kuva pienennetään selaimessa. Istuntoluonnos suojaa sivun vahinkopäivitykseltä. Pysyvä tallennus tapahtuu vain käyttäjän valinnalla eikä sitä suositella yhteiskäyttöisellä laitteella. Voit poistaa kaikki tiedot Viimeistele-vaiheessa.</p></details>
           {draft.notice && <div className="draft-notice"><p role="status">{draft.notice}</p><button type="button" aria-label="Sulje luonnosilmoitus" onClick={draft.dismissNotice}>Sulje</button></div>}
           {draft.error && <p role="alert" className="field-error">{draft.error}</p>}
           {compact && !mobile && <button className="preview-toggle" type="button" aria-expanded={showPreview} aria-controls="preview-panel" onClick={() => setShowPreview(!showPreview)}>{showPreview ? 'Piilota esikatselu' : 'Näytä esikatselu'}</button>}

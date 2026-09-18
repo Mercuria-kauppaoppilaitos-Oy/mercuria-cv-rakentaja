@@ -7,6 +7,42 @@ const photoPath = fileURLToPath(new URL('../fixtures/photo.png', import.meta.url
 const key = 'mercuria-cv-draft-v1';
 async function step(page: Page, label: string) { await page.getByRole('navigation', { name: 'CV:n vaiheet' }).getByRole('button', { name: label, exact: true }).click(); }
 
+for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
+  test(`vapaaehtoinen AI-ehdotus hyväksytään oikeaan kenttään, axe ${viewport.width}px`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    const original = 'Avustin asiakkaita ja järjestin tuotteita.';
+    const suggestion = 'Avustin asiakkaita ja huolehdin tuotteiden järjestämisestä.';
+    const requests: unknown[] = [];
+    await page.route('**/api/rewrite-text', async (route) => {
+      requests.push(route.request().postDataJSON());
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ suggestion }) });
+    });
+    await page.goto('/');
+    await page.getByLabel('Etunimi', { exact: true }).fill('Aino');
+    await page.getByLabel('Sähköposti', { exact: true }).fill('private@example.com');
+    if (viewport.width < 768) await page.locator('#active-step').selectOption('2');
+    else await step(page, 'Työkokemus');
+    await page.getByRole('button', { name: 'Lisää työkokemus' }).click();
+    await page.getByLabel('Tehtävänimike tai kokemuksen tyyppi').fill('Harjoittelija');
+    await page.getByLabel('Tehtävät ja saavutukset').fill(original);
+    expect(requests).toHaveLength(0);
+    await page.getByRole('button', { name: 'Jalosta tekoälyllä' }).click();
+    await expect(page.getByRole('heading', { name: 'Tekoälyn tekstiehdotus' })).toBeFocused();
+    await expect(page.getByLabel('Tehtävät ja saavutukset')).toHaveValue(original);
+    await expect(page.locator('.rewrite-proposal')).toContainText(suggestion);
+    expect(requests).toEqual([{ textType: 'workExperience', sourceText: original, jobTitle: 'Harjoittelija' }]);
+    await page.addScriptTag({ content: axe.source });
+    const violations = await page.evaluate(async () => (await (window as unknown as { axe: typeof axe }).axe.run(document)).violations);
+    expect(violations).toEqual([]);
+    await page.getByRole('button', { name: 'Käytä ehdotusta' }).click();
+    await expect(page.getByLabel('Tehtävät ja saavutukset')).toHaveValue(suggestion);
+    await expect(page.getByRole('button', { name: 'Jalosta tekoälyllä' })).toBeFocused();
+    if (viewport.width < 768) await page.getByRole('button', { name: 'Esikatselu', exact: true }).click();
+    await expect(page.getByRole('article').getByText(suggestion)).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+}
+
 test('luonnos, väri ja käsitelty kuva palautuvat, poistuvat ja tyhjennys poistaa tallennukset', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('Etunimi', { exact: true }).fill('Aino');

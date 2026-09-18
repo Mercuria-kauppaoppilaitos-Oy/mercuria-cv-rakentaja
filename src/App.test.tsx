@@ -17,7 +17,7 @@ describe('CV-rakentaja', () => {
     await selectStep(user, 'Esittely');
     expect(screen.getByRole('group', { name: 'Esittelyteksti' })).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Esittely', level: 4 })).toBeVisible();
-    expect(screen.getByText('Tietosi käsitellään tällä laitteella eikä niitä lähetetä palvelimelle.')).toBeVisible();
+    expect(screen.getByText('CV-tiedot säilyvät normaalisti tällä laitteella. Vapaaehtoinen tekoälyjalostus lähettää vain valitun tekstin ja mahdollisen tehtävänimikkeen tekoälypalvelulle.')).toBeVisible();
   });
 
   it('päivittää kaikki kahdeksan kenttää esikatseluun ilman lähetystä', async () => {

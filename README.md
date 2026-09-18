@@ -14,9 +14,10 @@ npm run dev
 | Komento | Toiminto |
 | --- | --- |
 | `npm run dev` | Paikallinen kehityspalvelin. |
+| `npm run dev:full` | Käyttöliittymä ja vapaaehtoinen AI-rajapinta paikallisesti, ilman Vercel-projektiin linkittämistä. |
 | `npm test` | Vitest-yksikkö-, integraatio-, HTML-rakenne-, saavutettavuus- ja oikean PDF:n tekstinpoimintatestit. |
 | `npm run test:watch` | Jatkuva testaus muokkauksen aikana. |
-| `npm run build` | TypeScript-tarkistus ja tuotantokoonti dist-kansioon. |
+| `npm run build` | TypeScript-tarkistus, tuotantokoonti ja palvelinsalaisuuksien merkkien tarkistus dist-kansiosta. |
 | `npm run preview` | Tuotantokoonnin paikallinen tarkastelu. |
 | `npm run test:e2e` | Playwrightin Chromium-selaintestit. |
 | `npm run test:e2e:ui` | Playwrightin interaktiivinen testikäyttöliittymä. |
@@ -79,7 +80,59 @@ Sovellus käyttää muuttamatonta Mercurian virallista sinistä SVG-logoa, Lato-
 
 CV-arkki on 210 × 297 mm, sisältömarginaalit 18 mm ja leipäteksti oletuksena 11 pt. Korkeus voi kasvaa pitkän sisällön mukana. ResizeObserver ja CSS-zoom sovittavat saman arkin esikatselun leveyteen muuttamatta sen tekstiasettelua. Kulmat ovat suorakulmaiset; selainvarjo poistuu tulostustyyleissä. prefers-reduced-motion poistaa painikkeiden siirtymäanimaatiot.
 
-Tiedot, kuva ja luonnos käsitellään kokonaan selaimessa. Niitä ei lähetetä palvelimelle tai tallenneta URL-osoitteeseen. Sovelluksessa ei ole backendia, kirjautumista, pilvitallennusta, analytiikkaa, seurantaa, evästebanneria tai ulkoisia fonttipyyntöjä. Pysyvä tallennus on käyttäjän valinta. Muut saman sivuston skriptit ja laitteen käyttäjät voivat periaatteessa päästä selaimen tallennuksiin; älä käytä pysyvää tallennusta yhteiskäyttöisellä laitteella. Sovellus ei tulosta henkilötietoja konsoliin.
+CV:n täyttö, kuva, esikatselu, luonnos, paikallinen ATS-tarkistus ja PDF muodostetaan selaimessa. Vapaaehtoinen AI-jalostus on poikkeus: painikkeesta lähetetään vain valitun Esittely- tai työkokemuskentän teksti ja työkokemuksen mahdollinen tehtävänimike palvelinrajapinnan kautta OpenAI:lle. Koko CV:tä, yhteystietokenttiä, kuvaa tai muiden osioiden sisältöä ei liitetä pyyntöön. Jos käyttäjä itse kirjoittaa henkilötietoja jalostettavaan tekstiin, ne ovat osa lähetettävää tekstiä. Ehdotukset näkyvät tavallisena tekstinä, ja vasta erillinen hyväksyntä lisää ehdotuksen CV:hen ja luonnokseen.
+
+Tietoja ei tallenneta URL-osoitteeseen. Sovelluksessa ei ole kirjautumista, pilvitallennusta, analytiikkaa, seurantaa, evästebanneria tai ulkoisia fonttipyyntöjä. Pysyvä tallennus on käyttäjän valinta. Muut saman sivuston skriptit ja laitteen käyttäjät voivat periaatteessa päästä selaimen tallennuksiin; älä käytä pysyvää tallennusta yhteiskäyttöisellä laitteella. Sovellus ei lokita jalostettavaa tekstiä, nimikettä, ehdotusta, pyyntörunkoa tai API-avainta.
+
+## Vapaaehtoinen AI-tekstinjalostus paikallisesti
+
+OpenAI API laskutetaan erikseen ChatGPT- ja Codex-tilauksista. ChatGPT-tilaus ei sisällä tämän sovelluksen API-kutsuja; tarkista erillinen API-laskutus ja projektin käyttörajat [OpenAI:n laskutusohjeesta](https://help.openai.com/en/articles/9039756-managing-billing-for-chatgpt-and-the-api-platform). Luo tarvittaessa palvelinpuolen avain [API keys -sivulla](https://platform.openai.com/api-keys) [virallisen aloitusohjeen](https://developers.openai.com/api/docs/quickstart) mukaisesti. Älä lähetä tai tulosta avainta.
+
+Luo **projektin juureen**, package.json-tiedoston viereen, `.env.local` (UTF-8 ilman BOM-merkkiä). Älä korvaa olemassa olevaa tiedostoa. Lisää omassa editorissasi avain seuraavaan muuttujaan (esimerkin arvo on vain paikkamerkki):
+
+```dotenv
+OPENAI_API_KEY=OMA_PALVELINPUOLEN_AVAIN
+OPENAI_MODEL=gpt-5.6-luna
+```
+
+`src/.env.local` ei ole oikea sijainti Vercelin ympäristömuuttujille. Vercel CLI 59:n Function-ympäristö lukee automaattisesti `.env`-tiedoston; tämän projektin palvelin lataa siksi juuren `.env.local`-tiedoston Node 24:n omalla loadEnvFile-toiminnolla vain paikallisessa Vercel-kehitystilassa. Tuotantotilassa käytettäisiin palvelinympäristöön asetettuja muuttujia. SDK lukee avaimen vain process.env-muuttujasta. Käynnistä kehityspalvelin uudelleen ympäristömuutosten jälkeen. Älä käytä `VITE_`-alkuista avainmuuttujaa. `.env`, `.env.local` ja muut `.env.*`-tiedostot ohitetaan Gitissä, myös alikansioissa; vain avaimeton `.env.example` voidaan versionhallita. Avainta ei saa lisätä Git-repositorioon. Mallivalinta on myös vain palvelimella.
+
+```cmd
+npm install
+npm run dev:full
+```
+
+Vastaava suora komento on `npx vercel dev --local --listen 127.0.0.1:3000`. Avaa **http://127.0.0.1:3000**. Nykyinen paikallinen Vercel CLI tukee `--local`-tilaa ilman kirjautumista tai projektin linkittämistä. Myös `npx vercel dev` on CLI:n tavallinen käynnistystapa, mutta se voi pyytää kirjautumista ja Vercel-projektin linkitystä; tässä pilotissa käytä `--local`-tilaa. Kehys ja Vite-kehityskomento tunnistetaan automaattisesti, joten vercel.json-tiedostoa ei tarvita. Vercel CLI on tässä vaiheessa vain paikallinen kehitystyökalu. Globaalia asennusta ei tarvita eikä sovellusta ole tämän työn yhteydessä julkaistu.
+
+`npm run dev` toimii edelleen ilman rajapintaa osoitteessa http://localhost:5173. Silloin AI-painike ilmoittaa hallitun virheen ja säilyttää tekstin; CV:n muu käyttö ja PDF toimivat normaalisti. Jos avain puuttuu kokonaisuudesta, rajapinta palauttaa yleisen virheen. Kehitysterminaali kertoo vain ympäristömuuttujan puuttumisesta. Selaimessa ei näytetä avaintietoja tai OpenAI:n teknisiä virheitä.
+
+Kenttään kirjoitetaan tekstiä suoraan; erillistä avainsanakenttää ei ole. Vähintään 10 ja enintään 1500 merkkiä pitkä teksti voidaan jalostaa painikkeesta. Ehdotuspaneeli jättää muut kentät käytettäviksi. Se näyttää alkuperäisen ja ehdotuksen sekä Käytä ehdotusta-, Yritä uudelleen- ja Peruuta-painikkeet. Uusi yritys käyttää samaa alkuperäistä tekstiä. Peruuta ja paneelin Escape palauttavat fokuksen avaavaan painikkeeseen. Työkokemus kohdistetaan pysyvän tunnisteen avulla myös muiden merkintöjen poistamisen jälkeen. Myöhemmin muokattua tekstiä ei ylikirjoiteta.
+
+### Rajapinta ja pilotin rajat
+
+`api/rewrite-text.ts` tarjoaa Node.js Vercel Web Handler -rajapinnan `POST /api/rewrite-text`. Palvelinlogiikka ja suomenkieliset ohjeet ovat `server/`-kansiossa, yhteiset Zod-sopimukset `shared/`-kansiossa. Selain ei tuo palvelinkoodia. Asennettu virallinen `openai`-SDK tarvitaan palvelimen Responses API -kutsuun; asennettu `vercel` on vain kehitysriippuvuus. Uusia riippuvuuksia ei lisätty.
+
+Pyyntö hyväksyy vain `{ textType: "profile" | "workExperience", sourceText, jobTitle? }`. Nimikettä käytetään vain työkokemuksessa, sen raja on 150 merkkiä. Ylimääräiset kentät, virheellinen JSON, väärä sisältötyyppi ja yli 8192 tavun runko hylätään ennen mallikutsua. Myös ilmoittamattoman pituuden runko tarkistetaan lukemisen aikana. Muut metodit hylätään. Selainperäiset eri alkuperän pyynnöt hylätään, eikä rajapinta avaa CORS-oikeuksia.
+
+Jokainen painallus tekee yhden Responses API -kutsun ilman SDK:n automaattisia uudelleenyrityksiä, keskusteluhistoriaa tai työkaluja. Oletus on [gpt-5.6-luna](https://developers.openai.com/api/docs/models/gpt-5.6-luna), matala päättelytaso, enintään 1200 vastaustokenia (sisältää päättelyn), 15 sekunnin aikakatkaisu ja `store: false`. Tuetuille GPT-5/GPT-6/o1/o3/o4-malliperheille käytetään low-tasoa; muiden mallien kanssa päättelyasetus jätetään pois. Vaihtomallin on tuettava Responses API:a ja Structured Outputsia. Rakenteinen `{ suggestion: string }` tarkistetaan lisäksi palvelimella: 10–1000 merkkiä, ei HTML:ää, Markdown-otsikoita, listoja tai ympäröiviä lainausmerkkejä. Vastausten otsakkeet sisältävät no-store-, no-referrer-, nosniff- ja DENY-suojaukset.
+
+Malli voi silti muuttaa merkitystä tai tuottaa virheellistä sisältöä; kieli ja tosiasioiden säilyminen ohjataan palvelimen ohjeilla, eikä niitä voida taata skeemalla. Käyttäjän on tarkistettava ehdotus. `store: false` ei ole lupaus palveluntarjoajan kaikkien lokien puuttumisesta. Pilotissa ei ole käyttäjätunnistusta, jaettua nopeusrajoitusta tai sovelluksen globaalia kustannuskattoa. Selainesto ja alkuperätarkistus eivät korvaa niitä. Rajapinta on tarkoitettu paikalliseen pilottiin; ennen mahdollista julkista käyttöä tarvitaan palvelimella valvottu käyttöoikeus, jaettu nopeusrajoitus ja kustannusrajat. Ulkoista tietokantaa tai maksullista lisäpalvelua ei ole lisätty.
+
+### AI-testit ja ensimmäinen oikea savutesti
+
+```cmd
+npm test
+npx playwright test
+npm run build
+git diff --check
+npm audit --omit=dev
+```
+
+Yksikkö- ja käyttöliittymätestit mockaavat SDK:n tai fetchin. Playwright mockaa `/api/rewrite-text`-reitin desktopissa ja mobiilissa ja tarkistaa ehdotusnäkymän axe-corella. Oikeita OpenAI-kutsuja ei tehdä testeissä. Koonti skannaa selaimen dist-tekstitiedostot avainmuuttujan, sk-alkuisten testiavainten, palvelinohjeiden ja SDK:n pääteosoitteen varalta lukematta ympäristötiedostoja tai oikean avaimen arvoa.
+
+Kun `npm run dev:full` on käynnissä, `node scripts/smoke-local-api.mjs` tarkistaa käyttöliittymän ja rajapinnan virhereitit tekemättä mallikutsua. `--missing-key`-lisävalinta on tarkoitettu vain palvelimelle, joka on käynnistetty varmasti ilman avainta.
+
+Ensimmäinen oikea AI-testi tehdään käsin: varmista editorissasi juuren `.env.local`, käynnistä paikallinen kokonaisuus ja avaa http://127.0.0.1:3000. Kirjoita Esittelyyn keinotekoinen teksti, esimerkiksi “Olen liiketoiminnan opiskelija. Opettelen asiakaspalvelua ja Excelin käyttöä.” Paina Jalosta tekoälyllä, tarkista tosiasiat ja varmista, että alkuperäinen säilyy ennen hyväksyntää. Peruuta ensin, kokeile uudelleen ja hyväksy ehdotus; tarkista lomake ja esikatselu. Tee vastaava testi työkokemukselle käyttäen nimikettä “Harjoittelija” ja tekstiä “Avustin asiakkaita ja järjestin tuotteita.” Lataa lopuksi PDF ja tarkista hyväksytty teksti. Kukin jalostuspainallus tekee maksullisen API-kutsun. Älä käytä oikeita henkilötietoja savutestissä.
 
 ## Testauksen taso ja rajaukset
 

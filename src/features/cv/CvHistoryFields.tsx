@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { useFieldArray, useWatch, type FieldPath, type UseFormReturn } from 'react-hook-form';
 import { createEmptyEducation, createEmptyWorkExperience, type CvData } from './cv-model';
+import { CvTextRewrite } from './ai/CvTextRewrite';
 
 type HistoryName = 'workExperience' | 'education';
 const sections = {
@@ -79,6 +80,7 @@ export function CvHistoryFields({ form, name }: { form: UseFormReturn<CvData>; n
                 <label htmlFor={`${prefix}-description`}>{config.descriptionLabel}</label>
                 <p id={`${prefix}-description-help`} className="field-help">{config.descriptionHelp}</p>
                 <textarea id={`${prefix}-description`} rows={4} aria-describedby={`${prefix}-description-help`} {...form.register(`${name}.${index}.description`)} />
+                {name === 'workExperience' && <CvTextRewrite form={form} textType="workExperience" entryId={field.id} sourceText={entry?.description ?? ''} jobTitle={entry && 'title' in entry ? entry.title : ''} />}
               </div>
             </div>
             <button type="button" className="remove-button" aria-label={`${config.removeLabel} ${index + 1}${identity ? `: ${identity}` : ''}`} onClick={() => {

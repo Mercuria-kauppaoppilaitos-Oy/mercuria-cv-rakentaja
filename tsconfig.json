@@ -20,6 +20,9 @@
     ]
   },
   "include": [
+    "api",
+    "server",
+    "shared",
     "src",
     "vite.config.ts",
     "playwright.config.ts",
