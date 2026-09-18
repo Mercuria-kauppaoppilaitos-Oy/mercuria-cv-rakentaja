@@ -3,11 +3,10 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { App } from '../../App';
 import { addEntry, selectStep } from '../../test/navigation';
-import { digitalLevels, languageLevels } from './cv-model';
+import { languageLevels } from './cv-model';
 
 const cases = [
   { add: 'Lisää osaaminen', entry: 'Osaaminen', field: 'Osaaminen', value: 'Myyntityö', heading: 'OSAAMINEN', remove: 'Poista osaaminen' },
-  { add: 'Lisää digitaito', entry: 'Digitaito', field: 'Ohjelman tai järjestelmän nimi', value: 'Excel', heading: 'DIGITAIDOT JA JÄRJESTELMÄT', remove: 'Poista digitaito' },
   { add: 'Lisää kieli', entry: 'Kieli', field: 'Kieli', value: 'Englanti', heading: 'KIELITAITO', remove: 'Poista kieli' },
   { add: 'Lisää kortti tai pätevyys', entry: 'Kortti tai pätevyys', field: 'Nimi', value: 'Hygieniapassi', heading: 'KORTIT JA PÄTEVYYDET', remove: 'Poista kortti tai pätevyys' },
   { add: 'Lisää suosittelija', entry: 'Suosittelija', field: 'Nimi', value: 'Meri', heading: 'SUOSITTELIJAT', remove: 'Poista suosittelija' },
@@ -52,7 +51,6 @@ describe('Uudet CV-osiot', () => {
       await user.type(entry(section.entry).getByLabelText(section.field), '   ');
     }
     await selectStep(user, 'Osaaminen');
-    await user.selectOptions(entry('Digitaito').getByRole('combobox'), 'Hyvä');
     await user.selectOptions(entry('Kieli').getByRole('combobox'), 'Sujuva');
     for (const section of cases) expect(preview().queryByRole('heading', { name: section.heading })).not.toBeInTheDocument();
     const controls = Array.from(container.querySelectorAll('input, textarea, select'));
@@ -60,17 +58,11 @@ describe('Uudet CV-osiot', () => {
     for (const control of controls) expect(control).toHaveAccessibleName();
   });
 
-  it('näyttää kaikki digitaito- ja kielitasot tekstinä ja sallii digitaitotason tyhjäksi', async () => {
+  it('näyttää ohjelmiston osaamisessa ja kaikki kielitasot tekstinä', async () => {
     const user = userEvent.setup();
     render(<App />);
-    await addEntry(user, 'Lisää digitaito');
-    await user.type(entry('Digitaito').getByLabelText('Ohjelman tai järjestelmän nimi'), 'Microsoft Excel');
-    expect(preview().getByText('Microsoft Excel')).toBeVisible();
-    for (const level of digitalLevels) {
-      await user.selectOptions(entry('Digitaito').getByRole('combobox'), level);
-      expect(preview().getByText(`Microsoft Excel – ${level.toLocaleLowerCase('fi')}`)).toBeVisible();
-    }
-    await user.selectOptions(entry('Digitaito').getByRole('combobox'), '');
+    await addEntry(user, 'Lisää osaaminen');
+    await user.type(entry('Osaaminen').getByLabelText('Osaaminen'), 'Microsoft Excel');
     expect(preview().getByText('Microsoft Excel')).toBeVisible();
     await addEntry(user, 'Lisää kieli');
     await user.type(entry('Kieli').getByLabelText('Kieli'), 'Englanti');
@@ -157,7 +149,7 @@ describe('Uudet CV-osiot', () => {
       await user.type(entry(section.entry).getByLabelText(section.field), section.value);
     }
     expect(preview().getAllByRole('heading', { level: 4 }).map((heading) => heading.textContent)).toEqual([
-      'Esittely', 'TYÖKOKEMUS', 'KOULUTUS', 'OSAAMINEN', 'DIGITAIDOT JA JÄRJESTELMÄT', 'KIELITAITO', 'KORTIT JA PÄTEVYYDET', 'SUOSITTELIJAT',
+      'Esittely', 'TYÖKOKEMUS', 'KOULUTUS', 'OSAAMINEN', 'KIELITAITO', 'KORTIT JA PÄTEVYYDET', 'SUOSITTELIJAT',
     ]);
   });
 });

@@ -12,7 +12,6 @@ export function CvFinish({ data }: { data: CvData }) {
     ['Työkokemus', `${countContent(data.workExperience)} merkintää`],
     ['Koulutus', `${countContent(data.education)} merkintää`],
     ['Osaaminen', `${countContent(data.skills)} merkintää`],
-    ['Digitaidot ja järjestelmät', `${data.digitalSkills.filter((entry) => entry.name.trim()).length} merkintää`],
     ['Kielitaito', `${data.languages.filter((entry) => entry.name.trim()).length} merkintää`],
     ['Kortit ja pätevyydet', `${countContent(data.certifications)} merkintää`],
     ['Suosittelijat', data.referencesDisplay === 'hidden' ? 'Piilotettu' : data.referencesDisplay === 'on-request' ? 'Saatavilla pyydettäessä' : `${countContent(data.references)} merkintää`],

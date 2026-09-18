@@ -6,6 +6,22 @@ import { createEmptyCv } from './cv-model';
 import { CvPreview } from './CvPreview';
 
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+it('ohittaa alipikselien vaihtelun, rajaa skaalan ja vapauttaa mittauksen', () => {
+  let width = 400.2;
+  vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(() => width);
+  let resize = () => {}; const disconnect = vi.fn();
+  vi.stubGlobal('ResizeObserver', class {
+    constructor(callback: () => void) { resize = callback; }
+    observe() {} disconnect = disconnect;
+  });
+  const { unmount } = render(<CvPreview data={createEmptyCv()} />);
+  const article = screen.getByRole('article'); const scale = article.style.zoom;
+  width = 400.8; act(resize); expect(article.style.zoom).toBe(scale);
+  width = 0; act(resize); expect(article.style.zoom).toBe(scale);
+  width = 1; act(resize); expect(Number(article.style.zoom)).toBe(0.1);
+  width = 10000; act(resize); expect(Number(article.style.zoom)).toBe(1);
+  unmount(); expect(disconnect).toHaveBeenCalledOnce();
+});
 
 it('näyttää virallisen logon yläpalkissa ja jättää sen pois CV:stä', () => {
   render(<App />);
@@ -62,7 +78,7 @@ it('säilyttää kaikki osiot ja käyttäjän sisällön luonnollisessa yksipals
   data.workExperience = [{ id: 'work', title: 'Myyjä', employer: 'Kauppa', location: 'Espoo', startDate: '2024-08', endDate: '', isCurrent: true, description: 'Palvelin asiakkaita' }];
   data.education = [{ id: 'education', qualification: 'Merkonomi', institution: 'Oppilaitos', location: 'Helsinki', startDate: '2023-08', endDate: '2026-05', isCurrent: false, description: 'Liiketoiminta' }];
   data.skills = [{ id: 'skill', name: 'Myyntityö' }];
-  data.digitalSkills = [{ id: 'digital', name: 'Excel', proficiency: 'Hyvä' }];
+  data.skills.push({ id: 'digital', name: 'Excel – hyvä' });
   data.languages = [{ id: 'language', name: 'Englanti', proficiency: 'Sujuva' }];
   data.certifications = [{ id: 'certificate', name: 'Hygieniapassi', issuer: 'Järjestäjä', issuedDate: '2025', expiryDate: 'Voimassa' }];
   data.references = [{ id: 'reference', name: 'Meri', title: 'Esihenkilö', organization: 'Yritys', email: 'meri@example.com', phone: '040 987' }];
@@ -70,9 +86,9 @@ it('säilyttää kaikki osiot ja käyttäjän sisällön luonnollisessa yksipals
   const article = screen.getByRole('article');
   const cv = within(article);
   expect(cv.getAllByRole('heading', { level: 4 }).map((heading) => heading.textContent)).toEqual([
-    'Esittely', 'TYÖKOKEMUS', 'KOULUTUS', 'OSAAMINEN', 'DIGITAIDOT JA JÄRJESTELMÄT', 'KIELITAITO', 'KORTIT JA PÄTEVYYDET', 'SUOSITTELIJAT',
+    'Esittely', 'TYÖKOKEMUS', 'KOULUTUS', 'OSAAMINEN', 'KIELITAITO', 'KORTIT JA PÄTEVYYDET', 'SUOSITTELIJAT',
   ]);
-  expect(article.querySelectorAll(':scope > section')).toHaveLength(8);
+  expect(article.querySelectorAll(':scope > section')).toHaveLength(7);
   expect(article.querySelector('img, svg, canvas, table')).toBeNull();
   for (const text of ['Profiiliteksti', 'Myyjä', 'Kauppa, Espoo · 08/2024–nykyhetki', 'Palvelin asiakkaita.', 'Merkonomi', 'Oppilaitos, Helsinki · 08/2023–05/2026', 'Liiketoiminta', 'Myyntityö', 'Excel – hyvä', 'Englanti – sujuva', 'Hygieniapassi – Järjestäjä – 2025 – Voimassa', 'Meri', 'Esihenkilö – Yritys', 'meri@example.com', '040 987']) {
     expect(cv.getByText(text)).toBeVisible();

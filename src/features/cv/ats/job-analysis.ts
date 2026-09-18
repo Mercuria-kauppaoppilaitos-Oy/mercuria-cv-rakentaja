@@ -8,7 +8,7 @@ export function compareRequirements(data: CvData, requirements: Requirement[]): 
     { section: 'Esittely', text: data.summary },
     ...data.workExperience.flatMap((entry) => [{ section: 'Työkokemus', text: entry.title, example: false }, { section: 'Työkokemus', text: entry.description, example: true }]),
     ...data.education.flatMap((entry) => [{ section: 'Koulutus', text: entry.qualification }, { section: 'Koulutus', text: entry.description }]),
-    ...(['skills', 'digitalSkills', 'languages', 'certifications'] as const).flatMap((key) => data[key].map((entry) => ({ section: { skills: 'Osaaminen', digitalSkills: 'Digitaidot ja järjestelmät', languages: 'Kielitaito', certifications: 'Kortit ja pätevyydet' }[key], text: entry.name }))),
+    ...(['skills', 'languages', 'certifications'] as const).flatMap((key) => data[key].map((entry) => ({ section: { skills: 'Osaaminen', languages: 'Kielitaito', certifications: 'Kortit ja pätevyydet' }[key], text: entry.name }))),
   ];
   return requirements.map((requirement) => {
     if (!requirement.concept) return { ...requirement, status: 'review', match: 'Epävarma tulkinta', evidence: [], suggestion: 'Tarkista vaatimus itse ja kuvaa todellinen koulutuksesi tai kokemuksesi.' };

@@ -15,8 +15,8 @@ it.each([false, true])('säilyttää yhden semanttisen sisältövirran, myös va
   expect(cv.getByText(data.personalDetails.professionalTitle)).toBeVisible();
   expect(cv.getByText(data.personalDetails.email)).toBeVisible();
   expect(cv.getByText(data.personalDetails.linkedIn)).toBeVisible();
-  expect(cv.getAllByRole('heading', { level: 4 }).map((heading) => heading.textContent)).toEqual(['Esittely', 'TYÖKOKEMUS', 'KOULUTUS', 'OSAAMINEN', 'DIGITAIDOT JA JÄRJESTELMÄT', 'KIELITAITO', 'KORTIT JA PÄTEVYYDET', 'SUOSITTELIJAT']);
-  expect(article.querySelectorAll(':scope > section')).toHaveLength(8);
+  expect(cv.getAllByRole('heading', { level: 4 }).map((heading) => heading.textContent)).toEqual(['Esittely', 'TYÖKOKEMUS', 'KOULUTUS', 'OSAAMINEN', 'KIELITAITO', 'KORTIT JA PÄTEVYYDET', 'SUOSITTELIJAT']);
+  expect(article.querySelectorAll(':scope > section')).toHaveLength(7);
   expect(article.querySelector('canvas, table, svg')).toBeNull();
   expect(article.querySelectorAll('img')).toHaveLength(photo ? 1 : 0);
   if (photo) expect(article.querySelector('img')).toHaveAttribute('alt', '');

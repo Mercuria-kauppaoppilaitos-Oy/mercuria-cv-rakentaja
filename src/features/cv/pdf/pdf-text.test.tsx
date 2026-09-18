@@ -11,6 +11,7 @@ import { createLongCvFixture, createShortCvFixture } from '../../../test/cv-fixt
 import { createEmptyCv, type CvData } from '../cv-model';
 import { createCvPdf } from './create-cv-pdf';
 import { registerPdfFonts } from './pdf-fonts';
+import { migrateLegacySkills } from '../draft-storage';
 
 const require = createRequire(import.meta.url);
 beforeAll(() => registerPdfFonts({
@@ -45,6 +46,22 @@ function expectOrder(text: string, expected: string[]) {
   }
 }
 
+it('vanhat digitaidot löytyvät vain Osaamisesta ja tehtävärivien väli säilyy oikeassa PDF:ssä', async () => {
+  const data = createEmptyCv(); data.personalDetails.firstName = 'Olivia'; data.personalDetails.lastName = 'Osaaja';
+  data.skills = [{ id: 'excel', name: 'Excel' }];
+  data.workExperience = [{ id: 'work', title: 'Harjoittelija', employer: 'Esimerkki Oy', location: '', startDate: '2026-09', endDate: '2026-11', isCurrent: false, description: 'Tähän tulee tietoa kokemuksesta\n\nTähän tulee tietoa kokemuksesta.' }];
+  const legacy = { ...data, digitalSkills: [{ id: 'old-excel', name: ' EXCEL ', proficiency: 'Hyvä' as const }, { id: 'procountor', name: 'Procountor', proficiency: 'Perusteet' as const }] };
+  const snapshot = JSON.stringify(legacy);
+  const result = await readPdf(migrateLegacySkills(legacy));
+  try {
+    expect(result.pages).toHaveLength(1);
+    expect(result.text).toBe('Olivia Osaaja TYÖKOKEMUS Harjoittelija Esimerkki Oy · 09/2026–11/2026 Tähän tulee tietoa kokemuksesta. Tähän tulee tietoa kokemuksesta. OSAAMINEN Excel – hyvä Procountor – perusteet');
+    expect(result.text).not.toContain('kokemuksestaTähän');
+    expect(result.text).not.toMatch(/DIGITAIDOT|Esittely|Aino|Esimerkki:|ATS-tarkistus/);
+    expect(JSON.stringify(legacy)).toBe(snapshot);
+  } finally { await result.destroy(); }
+});
+
 it('lyhyt Olivia-fixture mahtuu yhdelle sivulle kuvalla ja ilman, myös Kielitaito', async () => {
   const data = createShortCvFixture();
   data.appearance.photoDataUrl = `data:image/jpeg;base64,${(await readFile(new URL('../../../../tests/fixtures/cropped-photo.jpg', import.meta.url))).toString('base64')}`;
@@ -54,10 +71,11 @@ it('lyhyt Olivia-fixture mahtuu yhdelle sivulle kuvalla ja ilman, myös Kielitai
     const result = await readPdf(data, includePhoto);
     try {
       expect(result.pages).toHaveLength(1);
-      expectOrder(result.text, ['Olivia Osaaja', 'Liiketoiminnan opiskelija', 'olivia@example.com', 'Esittely', 'TYÖKOKEMUS', 'Myymäläharjoittelija', 'Esimerkkikauppa · 09/2026–11/2026', 'Hyllytys. Siisteys. Palvelin asiakkaita kassalla.', 'Kesätyöntekijä', 'Esimerkki Oy · 06/2026–08/2026', 'KOULUTUS', 'Liiketoiminnan perustutkinto', 'Esimerkkioppilaitos · 08/2024–05/2027', 'OSAAMINEN', 'DIGITAIDOT JA JÄRJESTELMÄT', 'Microsoft 365 – hyvä', 'Procountor – perusteet', 'KIELITAITO', 'Suomi – äidinkieli', 'Englanti – hyvä']);
+      expectOrder(result.text, ['Olivia Osaaja', 'Liiketoiminnan opiskelija', 'olivia@example.com', 'Esittely', 'TYÖKOKEMUS', 'Myymäläharjoittelija', 'Esimerkkikauppa · 09/2026–11/2026', 'Hyllytys. Siisteys. Palvelin asiakkaita kassalla.', 'Kesätyöntekijä', 'Esimerkki Oy · 06/2026–08/2026', 'KOULUTUS', 'Liiketoiminnan perustutkinto', 'Esimerkkioppilaitos · 08/2024–05/2027', 'OSAAMINEN', 'Microsoft 365 – hyvä', 'Procountor – perusteet', 'KIELITAITO', 'Suomi – äidinkieli', 'Englanti – hyvä', 'KORTIT JA PÄTEVYYDET', 'Hygieniapassi – 2026']);
       const workText = result.text.slice(result.text.indexOf('TYÖKOKEMUS'), result.text.indexOf('KOULUTUS'));
       expect(workText).not.toContain('•');
-      expect(result.text.slice(result.text.indexOf('DIGITAIDOT JA JÄRJESTELMÄT'))).not.toContain('•');
+      expect(result.text.slice(result.text.indexOf('OSAAMINEN'), result.text.indexOf('KORTIT JA PÄTEVYYDET'))).not.toContain('•');
+      expect(result.text).not.toContain('DIGITAIDOT JA JÄRJESTELMÄT');
       if (text) expect(result.text).toBe(text);
       text = result.text;
       expect(JSON.stringify(data)).toBe(snapshot);
@@ -86,7 +104,7 @@ it.each([0, 5, 10, 15, 20, 25, 30])('osio-otsikot eivät jää yksin sivun loppu
   data.summary += ' Olen huolellinen ja palveluhenkinen sekä haluan oppia työssä uusia taitoja.'.repeat(extra);
   const result = await readPdf(data);
   try {
-    for (const heading of ['Esittely', 'TYÖKOKEMUS', 'KOULUTUS', 'OSAAMINEN', 'DIGITAIDOT JA JÄRJESTELMÄT', 'KIELITAITO']) {
+    for (const heading of ['Esittely', 'TYÖKOKEMUS', 'KOULUTUS', 'OSAAMINEN', 'KIELITAITO']) {
       const page = result.pages.find((page) => page.text.includes(heading))!;
       expect(page.text.endsWith(heading), heading).toBe(false);
     }
@@ -118,7 +136,7 @@ it('generoi oikean monisivuisen A4-PDF:n ja säilyttää kaiken sisällön ATS-l
       'TYÖKOKEMUS', ...data.workExperience.map((entry) => entry.title),
       'KOULUTUS', ...data.education.map((entry) => entry.qualification),
       'OSAAMINEN', 'Asiakaspalvelu ja myyntityö',
-      'DIGITAIDOT JA JÄRJESTELMÄT', 'Microsoft Excel – hyvä',
+      'Microsoft Excel',
       'KIELITAITO', 'Englanti – sujuva',
       'KORTIT JA PÄTEVYYDET', 'Hygieniapassi – Esimerkkijärjestäjä – 2025 – Voimassa toistaiseksi',
       'SUOSITTELIJAT', 'Testi Suosittelija', 'Esihenkilö – Esimerkki Oy', 'reference@example.com', '040 000 0001',
@@ -144,7 +162,7 @@ it('generoi oikean monisivuisen A4-PDF:n ja säilyttää kaiken sisällön ATS-l
     for (let number = 1; number <= result.document.numPages; number++) urls.push(...(await (await result.document.getPage(number)).getAnnotations()).map((item) => item.url));
     expect(urls).toContain('mailto:test@example.com'); expect(urls).toContain(data.personalDetails.linkedIn); expect(urls).toContain('mailto:reference@example.com');
     // No heading may be the final content on its page, and the name is not repeated.
-    for (const heading of ['Esittely', 'TYÖKOKEMUS', 'KOULUTUS', 'OSAAMINEN', 'DIGITAIDOT JA JÄRJESTELMÄT', 'KIELITAITO', 'KORTIT JA PÄTEVYYDET', 'SUOSITTELIJAT']) {
+    for (const heading of ['Esittely', 'TYÖKOKEMUS', 'KOULUTUS', 'OSAAMINEN', 'KIELITAITO', 'KORTIT JA PÄTEVYYDET', 'SUOSITTELIJAT']) {
       const page = result.pages.find((page) => page.text.includes(heading))!;
       expect(page.text.endsWith(heading), heading + " / " + page.text.slice(-180)).toBe(false);
     }

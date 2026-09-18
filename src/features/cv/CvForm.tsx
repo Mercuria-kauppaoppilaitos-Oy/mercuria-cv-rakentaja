@@ -49,7 +49,6 @@ export function CvForm({ form, data, activeStep, onSelect, draftControls }: { fo
         {activeStep === 3 && <CvHistoryFields key="education" form={form} name="education" />}
         {activeStep === 4 && <>
           <CvAdditionalFields key="skills" form={form} name="skills" />
-          <CvAdditionalFields key="digitalSkills" form={form} name="digitalSkills" />
           <CvAdditionalFields key="languages" form={form} name="languages" />
         </>}
         {activeStep === 5 && <>

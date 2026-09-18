@@ -22,7 +22,7 @@ export function detectRequirements(ad: string): Requirement[] {
     if (!priority) continue;
     const concepts = skillConcepts.filter((concept) => [concept.name, ...concept.aliases].some((alias) => containsPhrase(source, alias)));
     for (const concept of concepts) {
-      if (!requirements.some((item) => item.concept === concept)) requirements.push({ id: concept.name, name: concept.name, source, priority, concept, step: concept.target === 'certifications' ? 5 : 4, category: { skills: concept.name === 'Tiimityö' ? 'Työelämätaito' : 'Ammatillinen taito', digitalSkills: 'Työkalu tai järjestelmä', languages: 'Kielitaito', certifications: 'Kortti tai pätevyys' }[concept.target] });
+      if (!requirements.some((item) => item.concept === concept)) requirements.push({ id: concept.name, name: concept.name, source, priority, concept, step: concept.target === 'certifications' ? 5 : 4, category: { skills: concept.name === 'Tiimityö' ? 'Työelämätaito' : 'Ammatillinen taito', languages: 'Kielitaito', certifications: 'Kortti tai pätevyys' }[concept.target] });
     }
     if (!concepts.length && !(cue && source.endsWith(':')) && source.replace(/[-•:]/g, '').trim().length > 8) {
       const step = /koulutus|tutkinto|merkonomi|tradenomi/i.test(source) ? 3 : /kokemus|vuotta|tehtävä|nimike/i.test(source) ? 2 : 4;

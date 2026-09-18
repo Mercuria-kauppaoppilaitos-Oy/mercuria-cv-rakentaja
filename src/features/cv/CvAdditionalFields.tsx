@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { useFieldArray, useWatch, type FieldPath, type UseFormReturn } from 'react-hook-form';
-import { createEmptyAdditionalEntry, digitalLevels, languageLevels, type AdditionalSection, type CvData } from './cv-model';
+import { createEmptyAdditionalEntry, languageLevels, type AdditionalSection, type CvData } from './cv-model';
 
 type EntryKey = 'name' | 'proficiency' | 'issuer' | 'issuedDate' | 'expiryDate' | 'title' | 'organization' | 'email' | 'phone';
 type EntryField = { key: EntryKey; label: string; options?: readonly string[]; type?: 'email' | 'tel'; inputMode?: 'numeric' };
@@ -8,13 +8,8 @@ type SectionConfig = { heading: string; entry: string; add: string; remove: stri
 const sections: Record<AdditionalSection, SectionConfig> = {
   skills: {
     heading: 'Osaaminen', entry: 'Osaaminen', add: 'Lisää osaaminen', remove: 'Poista osaaminen',
-    help: 'Esimerkiksi asiakaspalvelu, myyntityö, verkkokaupan tehtävät ja sosiaalisen median sisällöntuotanto.',
+    help: 'Lisää ammatillista osaamista, työtehtäviä, ohjelmistoja ja muita taitoja.',
     fields: [{ key: 'name', label: 'Osaaminen' }],
-  },
-  digitalSkills: {
-    heading: 'Digitaidot ja järjestelmät', entry: 'Digitaito', add: 'Lisää digitaito', remove: 'Poista digitaito',
-    help: 'Lisää käyttämäsi ohjelmat ja järjestelmät. Voit halutessasi valita osaamistason.',
-    fields: [{ key: 'name', label: 'Ohjelman tai järjestelmän nimi' }, { key: 'proficiency', label: 'Osaamistaso (valinnainen)', options: digitalLevels }],
   },
   languages: {
     heading: 'Kielitaito', entry: 'Kieli', add: 'Lisää kieli', remove: 'Poista kieli',
@@ -65,7 +60,7 @@ export function CvAdditionalFields({ form, name }: { form: UseFormReturn<CvData>
                 <label htmlFor={id}>{entryField.label}</label>
                 {entryField.options
                   ? <select id={id} {...accessibility} {...registration}><option value="">Valitse taso</option>{entryField.options.map((level) => <option key={level} value={level}>{level}</option>)}</select>
-                  : <input id={id} type={entryField.type ?? 'text'} inputMode={entryField.inputMode} {...accessibility} {...registration} />}
+                  : <input id={id} type={entryField.type ?? 'text'} inputMode={entryField.inputMode} placeholder={name === 'skills' ? 'Esimerkiksi asiakaspalvelu, hyllytys tai Procountor' : undefined} {...accessibility} {...registration} />}
                 {error && <p id={`${id}-error`} className="field-error" role="alert">{error.message}</p>}
               </div>;
             })}

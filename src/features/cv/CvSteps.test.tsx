@@ -44,7 +44,6 @@ it.each([
   ['Lisää työkokemus', 'Työkokemus', 'Työkokemus 1', 'Tehtävänimike tai kokemuksen tyyppi'],
   ['Lisää koulutus', 'Koulutus', 'Koulutus 1', 'Tutkinnon tai koulutuksen nimi'],
   ['Lisää osaaminen', 'Osaaminen', 'Osaaminen 1', 'Osaaminen'],
-  ['Lisää digitaito', 'Osaaminen', 'Digitaito 1', 'Ohjelman tai järjestelmän nimi'],
   ['Lisää kieli', 'Osaaminen', 'Kieli 1', 'Kieli'],
   ['Lisää kortti tai pätevyys', 'Lisäosiot', 'Kortti tai pätevyys 1', 'Nimi'],
   ['Lisää suosittelija', 'Lisäosiot', 'Suosittelija 1', 'Nimi'],

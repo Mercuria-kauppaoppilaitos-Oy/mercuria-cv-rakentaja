@@ -14,7 +14,11 @@ export function CvSheet({ appearance, children }: { appearance: CvData['appearan
     const element = viewport.current;
     if (!element) return;
     const resize = () => {
-      if (element.clientWidth > 0) setScale(Math.min(1, element.clientWidth / a4WidthInPixels));
+      const width = Math.floor(element.clientWidth);
+      if (width > 0) {
+        const next = Math.max(0.1, Math.min(1, Math.floor(width / a4WidthInPixels * 10000) / 10000));
+        setScale((current) => Math.abs(next - current) >= 0.001 ? next : current);
+      }
     };
     resize();
     if (typeof ResizeObserver === 'undefined') return;

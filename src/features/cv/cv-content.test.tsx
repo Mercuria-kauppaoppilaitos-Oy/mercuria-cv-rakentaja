@@ -8,6 +8,9 @@ import { detectRequirements } from './ats/requirement-detection';
 
 it.each([
   ['Hyllytys\nSiisteys', 'Hyllytys. Siisteys.'],
+  ['Tähän tulee tietoa kokemuksesta\nTähän tulee tietoa kokemuksesta', 'Tähän tulee tietoa kokemuksesta. Tähän tulee tietoa kokemuksesta.'],
+  ['Ääkköset ja esim. CRM', 'Ääkköset ja esim. CRM.'],
+  ['Ensimmäinen tehtävä\u2028Toinen tehtävä\u2029Kolmas tehtävä.', 'Ensimmäinen tehtävä. Toinen tehtävä. Kolmas tehtävä.'],
   ['Palvelin asiakkaita.\r\nOpin kassatyötä!', 'Palvelin asiakkaita. Opin kassatyötä!'],
   [' esim.\nCRM-järjestelmä mm.\nM365 / ERP', 'esim. CRM-järjestelmä mm. M365 / ERP.'],
   [' \n\r\n', ''],
@@ -29,7 +32,7 @@ it('HTML käyttää samaa sisältöprojektiota, säilyttää lähdedatan ja ATS 
   }
   const work = article.querySelector('[aria-labelledby="cv-work-title"]')!;
   expect(work.querySelector('ul, li')).toBeNull();
-  expect(article.querySelector('[aria-labelledby="cv-digital-title"] ul')).toHaveClass('cv-compact-list');
+  expect(article.querySelector('[aria-labelledby="cv-skills-title"] ul')).toHaveClass('cv-compact-list');
   expect(article.querySelector('[aria-labelledby="cv-languages-title"] ul')).toHaveClass('cv-compact-list');
   expect(JSON.stringify(data)).toBe(snapshot);
   const findings = compareRequirements(data, detectRequirements('Edellytämme Microsoft 365 ja kassatyö osaamista.'));

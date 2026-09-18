@@ -47,11 +47,11 @@ function Entry({ entry, lineHeight, last }: { entry: ContentEntry; lineHeight: n
 }
 
 function Section({ section, accent, surface, lineHeight, first }: { section: CvSection; accent: string; surface: string; lineHeight: number; first: boolean }) {
-  const listStyle = section.id === 'cv-digital-title' || section.id === 'cv-languages-title' ? styles.compactLine : styles.bullet;
+  const listStyle = section.id === 'cv-skills-title' || section.id === 'cv-languages-title' ? styles.compactLine : styles.bullet;
   // Reserve only the minimum start of the next text block, not four lines of
   // additional content. Keep headings and content in the same page flow.
   const presence = section.kind === 'summary' ? lineHeight * 2 + mm(contentLayout.summaryPaddingMm * 2)
-    : section.kind === 'list' ? lineHeight + styles.compactLine.marginTop
+    : section.kind === 'list' ? lineHeight
     : section.kind === 'entries' ? lineHeight * 2 + mm(contentLayout.metadataGapMm)
     : lineHeight;
   const heading = (
@@ -64,7 +64,7 @@ function Section({ section, accent, surface, lineHeight, first }: { section: CvS
     {heading}
     {section.kind === 'summary' && <Text style={[styles.summary, { backgroundColor: surface }]} orphans={2} widows={2}><LinkedText text={section.text} /></Text>}
     {section.kind === 'notice' && <Text orphans={2} widows={2}>{section.text}</Text>}
-    {section.kind === 'list' && section.items.map((item) => <Text key={item.id} style={listStyle} orphans={1} widows={2}>{listStyle === styles.bullet ? '• ' : ''}<LinkedText text={item.text} /></Text>)}
+    {section.kind === 'list' && section.items.map((item, index) => <Text key={item.id} style={[listStyle, { marginTop: index === 0 ? 0 : 2 }]} orphans={1} widows={2}>{listStyle === styles.bullet ? '• ' : ''}<LinkedText text={item.text} /></Text>)}
     {section.kind === 'entries' && section.entries.map((entry, index) => <Entry key={entry.id} entry={entry} lineHeight={lineHeight} last={index === section.entries.length - 1} />)}
   </>;
 }

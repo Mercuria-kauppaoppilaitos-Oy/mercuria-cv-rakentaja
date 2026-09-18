@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
 import { readFile } from 'node:fs/promises';
 import axe from 'axe-core';
-import { createShortCvFixture } from '../../src/test/cv-fixture';
+import { createShortCvFixture, createLongCvFixture } from '../../src/test/cv-fixture';
 const photoPath = fileURLToPath(new URL('../fixtures/photo.png', import.meta.url));
 const key = 'mercuria-cv-draft-v1';
 async function step(page: Page, label: string) { await page.getByRole('navigation', { name: 'CV:n vaiheet' }).getByRole('button', { name: label, exact: true }).click(); }
@@ -215,8 +215,8 @@ test('paikallinen ATS-vertailu lisää vain vahvistetun taidon ja PDF säilyttä
   await page.goto('/');
   await page.getByLabel('Etunimi', { exact: true }).fill('Päivi');
   await step(page, 'Osaaminen');
-  await page.getByRole('button', { name: 'Lisää digitaito', exact: true }).click();
-  await page.getByLabel('Ohjelman tai järjestelmän nimi').fill('Microsoft Excel');
+  await page.getByRole('button', { name: 'Lisää osaaminen', exact: true }).click();
+  await page.getByLabel('Osaaminen', { exact: true }).fill('Microsoft Excel');
   await step(page, 'Viimeistele');
   await page.getByLabel('Työpaikkailmoitus', { exact: true }).fill('Edellytämme Excel ja CRM osaamista. Toivomme ERP. Tarjoamme ILMOITUSSALAISUUS.');
   await page.getByRole('button', { name: 'Analysoi ilmoitus' }).click();
@@ -231,8 +231,8 @@ test('paikallinen ATS-vertailu lisää vain vahvistetun taidon ja PDF säilyttä
   await expect.poll(() => page.evaluate((storageKey) => sessionStorage.getItem(storageKey), key)).toContain('CRM');
   expect(await page.evaluate((storageKey) => sessionStorage.getItem(storageKey), key)).not.toContain('ILMOITUSSALAISUUS');
   await step(page, 'Osaaminen');
-  await expect(page.getByLabel('Ohjelman tai järjestelmän nimi').nth(0)).toHaveValue('Microsoft Excel');
-  await expect(page.getByLabel('Ohjelman tai järjestelmän nimi').nth(1)).toHaveValue('CRM');
+  await expect(page.getByLabel('Osaaminen', { exact: true }).nth(0)).toHaveValue('Microsoft Excel');
+  await expect(page.getByLabel('Osaaminen', { exact: true }).nth(1)).toHaveValue('CRM');
   await step(page, 'Viimeistele');
   await expect(page.getByLabel('Työpaikkailmoitus', { exact: true })).toHaveValue('');
   const downloading = page.waitForEvent('download');
@@ -245,7 +245,7 @@ test('paikallinen ATS-vertailu lisää vain vahvistetun taidon ja PDF säilyttä
     let text = '';
     for (let number = 1; number <= document.numPages; number++) text += (await (await document.getPage(number)).getTextContent()).items.filter((item) => 'str' in item).map((item) => item.str).join(' ');
     expect(text).toContain('Microsoft Excel'); expect(text).toContain('CRM');
-    expect(text.replace(/\s+/g, ' ').trim()).toBe('Päivi DIGITAIDOT JA JÄRJESTELMÄT Microsoft Excel CRM');
+    expect(text.replace(/\s+/g, ' ').trim()).toBe('Päivi OSAAMINEN Microsoft Excel CRM');
     expect(text).not.toMatch(/ERP|ILMOITUSSALAISUUS|Analysoi|Vahvistan|Tarkista tai täydennä/);
   } finally { await task.destroy(); }
 });
@@ -253,7 +253,7 @@ test('paikallinen ATS-vertailu lisää vain vahvistetun taidon ja PDF säilyttä
 test('lyhyen Olivia-luonnoksen HTML ja molemmat PDF-viennit säilyttävät kappaleet ja yhden sivun', async ({ page }, testInfo) => {
   const data = createShortCvFixture();
   data.appearance.photoDataUrl = `data:image/jpeg;base64,${(await readFile(fileURLToPath(new URL('../fixtures/cropped-photo.jpg', import.meta.url)))).toString('base64')}`;
-  await page.addInitScript((cvData) => sessionStorage.setItem('mercuria-cv-draft-v1', JSON.stringify({ schemaVersion: 2, persistent: false, data: cvData })), data);
+  await page.addInitScript((cvData) => sessionStorage.setItem('mercuria-cv-draft-v1', JSON.stringify({ schemaVersion: 3, persistent: false, data: cvData })), data);
   await page.goto('/');
   const work = page.getByRole('region', { name: 'TYÖKOKEMUS' });
   await expect(work.getByText('Esimerkkikauppa · 09/2026–11/2026', { exact: true })).toBeVisible();
@@ -306,4 +306,56 @@ test('ATS-tulokset ja pitkät ilmoitukset ovat saavutettavia myös kapeassa aset
   await expect(page.locator('.cv-name')).toContainText('Åsa-Maria Päivi');
   expect(await page.locator('.cv-masthead').evaluate((element) => element.scrollHeight <= element.clientHeight + 1)).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('täysi CV ja valokuva eivät aiheuta esikatselun koon tai skaalan palautesilmukkaa', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
+  const data = createLongCvFixture();
+  await page.addInitScript((cvData) => sessionStorage.setItem('mercuria-cv-draft-v1', JSON.stringify({ schemaVersion: 3, persistent: false, data: cvData })), data);
+  await page.setViewportSize({ width: 1440, height: 900 }); await page.goto('/');
+  await page.getByLabel('Lisää valokuva').setInputFiles(photoPath);
+  await page.getByRole('button', { name: 'Käytä kuvaa' }).click();
+  await step(page, 'Työkokemus');
+  await page.getByLabel('Tehtävät ja saavutukset').nth(0).fill('Palvelin asiakkaita.\nKäsittelin tilauksia ja käytin Microsoft Excel -ohjelmaa.');
+  await step(page, 'Koulutus');
+  await page.getByLabel('Tutkinnon tai koulutuksen nimi').nth(0).fill('Liiketoiminnan koulutus ja taloushallinto');
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    if (width === 390) await page.getByRole('button', { name: 'Esikatselu', exact: true }).click();
+    await expect(page.getByRole('article')).toBeVisible();
+    await page.evaluate(async () => { await document.fonts.ready; await Promise.all([...document.querySelectorAll<HTMLImageElement>('.cv-page img')].map((image) => image.decode())); });
+    if (width === 1440) {
+      // Put the panel at the overflow threshold. Without a reserved scrollbar,
+      // removing the bar increases scale enough to make it appear again.
+      await page.locator('.preview-column').evaluate((element) => {
+        const panel = element as HTMLElement;
+        const article = panel.querySelector('.cv-page')!;
+        const viewport = panel.querySelector('.cv-sheet-viewport') as HTMLElement;
+        const style = getComputedStyle(panel);
+        const gutter = panel.offsetWidth - panel.clientWidth - parseFloat(style.borderLeftWidth) - parseFloat(style.borderRightWidth);
+        const height = article.getBoundingClientRect().height;
+        const outside = panel.querySelector('.preview')!.getBoundingClientRect().height - height + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+        panel.style.height = `${outside + height * (1 + gutter / (2 * viewport.clientWidth))}px`;
+        panel.style.alignSelf = 'start';
+      });
+    }
+    const samples = await page.locator('.cv-page').evaluate(async (element) => {
+      const values: { width: number; height: number; scale: number }[] = [];
+      const started = performance.now();
+      while (performance.now() - started < 2000) {
+        await new Promise<void>((done) => requestAnimationFrame(() => done()));
+        const box = element.getBoundingClientRect();
+        values.push({ width: box.width, height: box.height, scale: Number(getComputedStyle(element).zoom) });
+      }
+      return values;
+    });
+    for (const key of ['width', 'height', 'scale'] as const) {
+      const values = samples.map((sample) => sample[key]);
+      expect(Math.max(...values) - Math.min(...values), `${width}px ${key}`).toBeLessThan(key === 'scale' ? 0.001 : 0.5);
+    }
+    await page.locator('.preview-column').evaluate((element) => { (element as HTMLElement).style.height = ''; (element as HTMLElement).style.alignSelf = ''; });
+  }
+  expect(errors).toEqual([]);
 });

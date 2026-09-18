@@ -2,6 +2,22 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { createEmptyCv } from './cv-model';
 import { draftStorageKey, loadDraft, removeDrafts, saveDraft } from './draft-storage';
 afterEach(() => vi.restoreAllMocks());
+it.each([1, 2])('migroi version %s osaamiset ja digitaidot hävittämättä muita tietoja', (schemaVersion) => {
+  const data = createEmptyCv(); data.personalDetails.firstName = 'Olivia';
+  data.summary = 'Ääkköset ja alkuperäiset rivit\nsäilyvät.';
+  data.skills = [{ id: 'original', name: ' Excel ' }, { id: 'duplicate', name: 'excel' }, { id: 'service', name: 'Asiakaspalvelu' }];
+  const legacy = { ...data, digitalSkills: [{ id: 'old-excel', name: 'EXCEL', proficiency: 'Hyvä' }, { id: 'old-procountor', name: ' Procountor ', proficiency: 'Perusteet' }, { id: 'old-duplicate', name: 'procountor', proficiency: 'Perusteet' }] };
+  const raw = JSON.stringify({ schemaVersion, persistent: false, data: legacy }); sessionStorage.setItem(draftStorageKey, raw);
+  const restored = loadDraft();
+  expect(restored.restored).toBe(true); expect(restored.error).toBe('');
+  expect(restored.data.skills).toEqual([{ id: 'original', name: 'Excel – hyvä' }, { id: 'service', name: 'Asiakaspalvelu' }, { id: 'old-procountor', name: 'Procountor – perusteet' }]);
+  expect(restored.data).not.toHaveProperty('digitalSkills');
+  expect({ ...restored.data, skills: data.skills }).toEqual(data);
+  expect(sessionStorage.getItem(draftStorageKey)).toBe(raw);
+  saveDraft(restored.data, false);
+  expect(loadDraft().data).toEqual(restored.data);
+  expect(JSON.parse(sessionStorage.getItem(draftStorageKey)!).schemaVersion).toBe(3);
+});
 it('tallentaa ja palauttaa istuntoluonnoksen väreineen ja kuvineen', () => {
   const data = createEmptyCv();
   data.personalDetails.firstName = 'Aino';
@@ -10,7 +26,7 @@ it('tallentaa ja palauttaa istuntoluonnoksen väreineen ja kuvineen', () => {
   expect(saveDraft(data, false)).toBe('');
   expect(localStorage.getItem(draftStorageKey)).toBeNull();
   expect(loadDraft()).toMatchObject({ data, restored: true, persistent: false });
-  expect(JSON.parse(sessionStorage.getItem(draftStorageKey)!).schemaVersion).toBe(2);
+  expect(JSON.parse(sessionStorage.getItem(draftStorageKey)!).schemaVersion).toBe(3);
 });
 it('siirtää luonnoksen tallennusten välillä ja poistaa molemmat turvallisesti', () => {
   const data = createEmptyCv();
@@ -57,5 +73,5 @@ it.each([false, true])('migroi version 1 kuvan ja värin poistamalla kohdistusar
   const restored = loadDraft(); expect(restored).toMatchObject({ restored: true, persistent, data });
   expect(restored.data.appearance).not.toHaveProperty('photoPositionX'); expect(restored.data.appearance).not.toHaveProperty('photoPositionY');
   saveDraft(restored.data, persistent);
-  expect(JSON.parse((persistent ? localStorage : sessionStorage).getItem(draftStorageKey)!).schemaVersion).toBe(2);
+  expect(JSON.parse((persistent ? localStorage : sessionStorage).getItem(draftStorageKey)!).schemaVersion).toBe(3);
 });

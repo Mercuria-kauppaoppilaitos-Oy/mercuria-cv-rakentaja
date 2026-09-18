@@ -16,7 +16,6 @@ function FindingCard({ finding, form, onEdit, onAdded }: { finding: Finding; for
     // Append to the existing form array; never replace an existing description.
     switch (target) {
       case 'skills': form.setValue(target, [...form.getValues(target), { id: entry.id, name }], { shouldDirty: true }); break;
-      case 'digitalSkills': form.setValue(target, [...form.getValues(target), { id: entry.id, name, proficiency: '' }], { shouldDirty: true }); break;
       case 'languages': form.setValue(target, [...form.getValues(target), { id: entry.id, name, proficiency: '' }], { shouldDirty: true }); break;
       case 'certifications': form.setValue(target, [...form.getValues(target), { id: entry.id, name, issuer: '', issuedDate: '', expiryDate: '' }], { shouldDirty: true }); break;
     }

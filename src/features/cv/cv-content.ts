@@ -30,7 +30,7 @@ export function joinDetails(values: string[]): string {
 
 /** Presentation only: retain words and abbreviations without rewriting the draft. */
 export function formatDescription(text: string): string {
-  return text.split(/\r\n|\r|\n/).map((line) => line.trim().replace(/^(?:[•●]\s*|[-*]\s+)/u, '')).filter(Boolean)
+  return text.split(/\r\n|[\r\n\u2028\u2029]/).map((line) => line.trim().replace(/^(?:[•●]\s*|[-*]\s+)/u, '')).filter(Boolean)
     .map((line) => /[.!?…:;][”’"')\]]*$/u.test(line) ? line : `${line}.`).join(' ');
 }
 
@@ -53,7 +53,6 @@ export function getHistoryEntries(entries: HistoryEntry[]): ContentEntry[] {
 export function getAdditionalSections(data: CvData): CvSection[] {
   const lists: Extract<CvSection, { kind: 'list' }>[] = [
     { kind: 'list', heading: 'OSAAMINEN', id: 'cv-skills-title', items: data.skills.map((entry) => ({ id: entry.id, text: entry.name.trim() })) },
-    { kind: 'list', heading: 'DIGITAIDOT JA JÄRJESTELMÄT', id: 'cv-digital-title', items: data.digitalSkills.map((entry) => ({ id: entry.id, text: entry.name.trim() ? joinDetails([entry.name, entry.proficiency.toLocaleLowerCase('fi')]) : '' })) },
     { kind: 'list', heading: 'KIELITAITO', id: 'cv-languages-title', items: data.languages.map((entry) => ({ id: entry.id, text: entry.name.trim() ? joinDetails([entry.name, entry.proficiency.toLocaleLowerCase('fi')]) : '' })) },
     { kind: 'list', heading: 'KORTIT JA PÄTEVYYDET', id: 'cv-certifications-title', items: data.certifications.map((entry) => ({ id: entry.id, text: joinDetails([entry.name, entry.issuer, /^\d{4}$/.test(entry.issuedDate) ? entry.issuedDate : '', entry.expiryDate]) })) },
   ];
