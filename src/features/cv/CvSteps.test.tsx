@@ -22,7 +22,7 @@ it('aloittaa perustiedoista ja vaihtaa kaikkia vaiheita valikon painikkeilla', a
     expect(document.getElementById('active-step-heading')).toHaveTextContent(label);
   }
   expect(screen.getByRole('button', { name: 'Seuraava' })).toBeDisabled();
-  expect(screen.getByText('PDF-lataus lisätään seuraavassa vaiheessa.')).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Lataa CV PDF-muodossa' })).toBeVisible();
 });
 
 it('siirtyy Edellinen- ja Seuraava-painikkeilla ja säilyttää tavalliset kenttäarvot', async () => {

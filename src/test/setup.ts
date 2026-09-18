@@ -3,4 +3,7 @@ import { cleanup } from '@testing-library/react';
 import { afterEach, beforeEach } from 'vitest';
 
 afterEach(cleanup);
-beforeEach(() => { localStorage.clear(); sessionStorage.clear(); });
+beforeEach(() => {
+  if (typeof localStorage !== 'undefined') localStorage.clear();
+  if (typeof sessionStorage !== 'undefined') sessionStorage.clear();
+});

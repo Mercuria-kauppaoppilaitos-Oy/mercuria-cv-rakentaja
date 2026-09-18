@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
+import { readFile } from 'node:fs/promises';
 import axe from 'axe-core';
 const photoPath = fileURLToPath(new URL('../fixtures/photo.png', import.meta.url));
 const key = 'mercuria-cv-draft-v1';
@@ -150,4 +151,57 @@ test('reunakohteen rajaus raahaamalla ja näppäimistöllä säilyy sekä mobiil
     await page.keyboard.press('Escape'); await expect(dialog).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Vaihda kuva' })).toBeFocused();
   }
+});
+
+test('lataa selaimessa tekstipohjaisen ATS-luettavan PDF:n paikallisesti ja vasta painettaessa', async ({ page }, testInfo) => {
+  const consoleErrors: string[] = [];
+  const requests: string[] = [];
+  page.on('console', (message) => { if (message.type() === 'error') consoleErrors.push(message.text()); });
+  page.on('pageerror', (error) => consoleErrors.push(error.message));
+  page.on('request', (request) => requests.push(request.url()));
+  await page.goto('/');
+  await page.getByLabel('Etunimi', { exact: true }).fill('Päivi');
+  await page.getByLabel('Sukunimi', { exact: true }).fill('Määttä');
+  await page.getByLabel('Ammatillinen otsikko').fill('Työpäällikkö');
+  await page.getByLabel('Sähköposti').fill('paivi@example.com');
+  await page.getByLabel('Paikkakunta').fill('Jyväskylä');
+  await page.getByLabel('LinkedIn').fill('https://www.linkedin.com/in/pdf-fixture');
+  await page.getByLabel('Lisää valokuva').setInputFiles(photoPath);
+  await page.getByRole('button', { name: 'Käytä kuvaa' }).click();
+  await step(page, 'Esittely');
+  await page.getByRole('textbox', { name: 'Esittely', exact: true }).fill('Ääkköset: ä ö å Ä Ö Å. Johdan asiakaspalvelua.');
+  await step(page, 'Työkokemus');
+  await page.getByRole('button', { name: 'Lisää työkokemus' }).click();
+  await page.getByLabel('Tehtävänimike tai kokemuksen tyyppi').fill('Palvelupäällikkö');
+  await page.getByLabel('Työnantaja').fill('Testiyritys');
+  await step(page, 'Koulutus');
+  await page.getByRole('button', { name: 'Lisää koulutus' }).click();
+  await page.getByLabel('Tutkinnon tai koulutuksen nimi').fill('Merkonomi');
+  await step(page, 'Viimeistele');
+  await page.getByLabel('HEX-väri').fill('#203040');
+  expect(requests.some((url) => /create-cv-pdf|react-pdf.*renderer|pdfkit/.test(url))).toBe(false);
+  const downloading = page.waitForEvent('download');
+  const button = page.getByRole('button', { name: 'Lataa CV PDF-muodossa' });
+  await button.focus(); await page.keyboard.press('Enter');
+  const download = await downloading;
+  expect(download.suggestedFilename()).toBe('Paivi_Maatta_CV.pdf');
+  const path = testInfo.outputPath(download.suggestedFilename()); await download.saveAs(path);
+  const bytes = await readFile(path);
+  expect(bytes.length).toBeGreaterThan(1000); expect(bytes.subarray(0, 5).toString()).toBe('%PDF-');
+  // Also verify the PDF produced by the actual browser download, not just Node fixtures.
+  const { getDocument, OPS } = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  const task = getDocument({ data: new Uint8Array(bytes) });
+  const document = await task.promise;
+  try {
+    const text = (await (await document.getPage(1)).getTextContent()).items.filter((item) => 'str' in item).map((item) => item.str).join(' ').replace(/\s+/g, ' ');
+    let offset = 0;
+    for (const expected of ['Päivi Määttä', 'Työpäällikkö', 'paivi@example.com', 'Jyväskylä', 'Esittely', 'Ääkköset: ä ö å Ä Ö Å', 'TYÖKOKEMUS', 'Palvelupäällikkö', 'Testiyritys', 'KOULUTUS', 'Merkonomi']) {
+      const index = text.indexOf(expected, offset); expect(index).toBeGreaterThanOrEqual(offset); offset = index + expected.length;
+    }
+    const operators = await (await document.getPage(1)).getOperatorList();
+    expect(operators.fnArray.some((operation) => [OPS.paintImageXObject, OPS.paintInlineImageXObject].includes(operation))).toBe(true);
+  } finally { await task.destroy(); }
+  await expect(page.getByRole('status')).toContainText('PDF on valmis');
+  expect(consoleErrors).toEqual([]);
+  expect(requests.filter((url) => !url.startsWith('http://127.0.0.1:4173') && !url.startsWith('data:') && !url.startsWith('blob:'))).toEqual([]);
 });

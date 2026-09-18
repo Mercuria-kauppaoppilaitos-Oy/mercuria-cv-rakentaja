@@ -5,6 +5,8 @@ playwright-report/
 test-results/
 *.log
 *.tsbuildinfo
+*.pdf
+downloads/
 .env
 .env.*
 !.env.example

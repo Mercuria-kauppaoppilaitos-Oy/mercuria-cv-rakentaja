@@ -1,4 +1,5 @@
 import { cvSchema, type CvData } from './cv-model';
+import { CvPdfDownloadButton } from './pdf/CvPdfDownloadButton';
 
 function countContent(entries: { id: string; [key: string]: string | boolean }[]) {
   return entries.filter((entry) => Object.entries(entry).some(([key, value]) => key !== 'id' && key !== 'proficiency' && typeof value === 'string' && value.trim())).length;
@@ -22,7 +23,7 @@ export function CvFinish({ data }: { data: CvData }) {
     <p>Tarkista CV-esikatselu ja palaa tarvittaessa muokkaamaan tietoja. Kaikki osiot ovat vapaaehtoisia.</p>
     <dl>{sections.map(([label, status]) => <div key={label}><dt>{label}</dt><dd>{status}</dd></div>)}</dl>
     {!validation.success && <div className="validation-summary" role="alert"><p>Korjaa vielä seuraavat tiedot:</p><ul>{validation.error.issues.map((issue, index) => <li key={index}>{issue.message}</li>)}</ul></div>}
-    <p className="pdf-note">PDF-lataus lisätään seuraavassa vaiheessa.</p>
+    <CvPdfDownloadButton data={data} />
     <p className="field-help">Luonnos säilyy oletuksena selaimen istunnossa. Pysyvä tallennus tapahtuu vain omalla valinnallasi.</p>
   </section>;
 }

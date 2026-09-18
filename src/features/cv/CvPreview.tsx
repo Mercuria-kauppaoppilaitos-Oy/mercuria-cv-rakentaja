@@ -1,6 +1,6 @@
 import type { CvData } from './cv-model';
-import { CvHistoryPreview } from './CvHistoryPreview';
-import { CvAdditionalPreview } from './CvAdditionalPreview';
+import { CvContentPreview } from './CvContentPreview';
+import { getCvSections } from './cv-content';
 import { CvSheet } from './CvSheet';
 import { CvHeader } from './CvHeader';
 
@@ -24,12 +24,10 @@ export function CvPreview({ data }: { data: CvData }) {
           <span aria-hidden="true" className="cv-contact-separator"> · </span>
           <span className="cv-contact-item"><PreviewText value={details.linkedIn} example="https://www.linkedin.com/in/aino-esimerkki" /></span>
         </div>
-        <section className="cv-summary" aria-labelledby="cv-summary-title"><h4 id="cv-summary-title">Esittely</h4>
-          <p><PreviewText value={data.summary} example="Olen palveluhenkinen ja huolellinen ammattilainen. Vahvuuksiani ovat sujuva asiakaspalvelu, yhteistyö ja halu oppia uutta. Etsin tehtävää, jossa voin hyödyntää osaamistani ja kehittyä." /></p>
-        </section>
-        <CvHistoryPreview entries={data.workExperience} heading="TYÖKOKEMUS" id="cv-work-title" />
-        <CvHistoryPreview entries={data.education} heading="KOULUTUS" id="cv-education-title" />
-        <CvAdditionalPreview data={data} />
+        {!data.summary.trim() && <section className="cv-summary" aria-labelledby="cv-summary-title"><h4 id="cv-summary-title">Esittely</h4>
+          <p><PreviewText value="" example="Olen palveluhenkinen ja huolellinen ammattilainen. Vahvuuksiani ovat sujuva asiakaspalvelu, yhteistyö ja halu oppia uutta. Etsin tehtävää, jossa voin hyödyntää osaamistani ja kehittyä." /></p>
+        </section>}
+        {getCvSections(data).map((section) => <CvContentPreview key={section.id} section={section} />)}
       </CvSheet>
     </section>
   );
