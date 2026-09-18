@@ -57,14 +57,17 @@ input[aria-invalid='true'], select[aria-invalid='true'] { border-color: #a23b30;
 .cv-contact { margin-top: 4mm; font-size: 10pt; line-height: 1.4; color: var(--cv-muted); }
 .cv-contact-item { display: inline; }
 .cv-contact-separator { color: var(--cv-muted); }
-.cv-summary, .cv-history { margin-top: 8mm; }
-.cv-summary h4, .cv-history h4 { font-family: var(--cv-heading-font); color: var(--cv-text); font-size: 11.5pt; font-weight: 700; letter-spacing: .09em; margin-bottom: 4mm; }
-.cv-summary h4::after, .cv-history h4::after { content: ''; display: block; width: 14mm; height: 1mm; background: var(--cv-accent); margin-top: 2.5mm; }
-.cv-summary p { background: var(--cv-surface); padding: 4mm 5mm; white-space: pre-wrap; }
-.cv-education-description { white-space: pre-wrap; margin-top: 2mm; }
+.cv-summary, .cv-history { margin-top: var(--cv-section-gap, 5mm); }
+.cv-contact + section, .cv-masthead + section { margin-top: var(--cv-first-section-gap, 4mm); }
+.cv-summary h4, .cv-history h4 { font-family: var(--cv-heading-font); color: var(--cv-text); font-size: 11.5pt; font-weight: 700; letter-spacing: .09em; margin-bottom: var(--cv-heading-gap, 2mm); }
+.cv-summary h4::after, .cv-history h4::after { content: ''; display: block; width: 14mm; height: 1mm; background: var(--cv-accent); margin-top: var(--cv-decoration-gap, 1.5mm); }
+.cv-summary p { background: var(--cv-surface); padding: var(--cv-summary-padding, 3mm) 5mm; white-space: pre-wrap; }
+.cv-education-description { white-space: normal; margin-top: var(--cv-description-gap, 1.5mm); }
 .cv-history > ul { padding-left: 1.3em; margin: 0; }
-.cv-history > ul > li, .cv-history-entry { break-inside: avoid; page-break-inside: avoid; }
-.cv-history-entry + .cv-history-entry { margin-top: 6mm; }
+.cv-history > ul > li { orphans: 1; widows: 2; }
+.cv-history-entry { break-inside: auto; }
+.cv-history h4, .cv-history-entry h5 { break-after: avoid; }
+.cv-history-entry + .cv-history-entry { margin-top: var(--cv-entry-gap, 4mm); }
 .cv-history-entry h5 { margin: 0; font-size: 12pt; font-weight: 700; }
 .cv-period { font-size: 10.5pt; letter-spacing: .035em; color: var(--cv-muted); margin-top: 1.5mm; }
 .cv-history-entry ul { padding-left: 1.3em; margin: 2mm 0 0; }
@@ -219,3 +222,7 @@ button:disabled { cursor: default; opacity: .5; }
 .ats-finding { margin-block: 1rem; padding: .75rem; border: 1px solid #a5a5a5; overflow-wrap: anywhere; }
 .ats-finding button { margin: .25rem; max-width: 100%; white-space: normal; }
 .ats-review h5 { font-size: 1rem; margin: .25rem 0; }
+
+.cv-history > .cv-compact-list { list-style: none; padding-left: 0; }
+.cv-metadata { font-size: 10.5pt; color: var(--cv-muted); margin-top: var(--cv-metadata-gap, .5mm); }
+.cv-page p { orphans: 2; widows: 2; }

@@ -74,7 +74,7 @@ it('säilyttää kaikki osiot ja käyttäjän sisällön luonnollisessa yksipals
   ]);
   expect(article.querySelectorAll(':scope > section')).toHaveLength(8);
   expect(article.querySelector('img, svg, canvas, table')).toBeNull();
-  for (const text of ['Profiiliteksti', 'Myyjä', 'Kauppa, Espoo', '08/2024–nykyhetki', 'Palvelin asiakkaita', 'Merkonomi', 'Oppilaitos, Helsinki', '08/2023–05/2026', 'Liiketoiminta', 'Myyntityö', 'Excel – hyvä', 'Englanti – sujuva', 'Hygieniapassi – Järjestäjä – 2025 – Voimassa', 'Meri', 'Esihenkilö – Yritys', 'meri@example.com', '040 987']) {
+  for (const text of ['Profiiliteksti', 'Myyjä', 'Kauppa, Espoo · 08/2024–nykyhetki', 'Palvelin asiakkaita.', 'Merkonomi', 'Oppilaitos, Helsinki · 08/2023–05/2026', 'Liiketoiminta', 'Myyntityö', 'Excel – hyvä', 'Englanti – sujuva', 'Hygieniapassi – Järjestäjä – 2025 – Voimassa', 'Meri', 'Esihenkilö – Yritys', 'meri@example.com', '040 987']) {
     expect(cv.getByText(text)).toBeVisible();
   }
 });

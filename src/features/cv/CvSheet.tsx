@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { CvData } from './cv-model';
 import { contrastingText, defaultAccentColor, isHexColor, mixWithWhite } from './color-utils';
+import { cvContentLayout as layout } from './cv-layout';
 
 const a4WidthInPixels = 210 * 96 / 25.4;
 
@@ -24,6 +25,14 @@ export function CvSheet({ appearance, children }: { appearance: CvData['appearan
 
   const accent = isHexColor(appearance.accentColor) ? appearance.accentColor : defaultAccentColor;
   const style: CSSProperties & Record<string, string | number> = {
+    '--cv-section-gap': `${layout.sectionGapMm}mm`,
+    '--cv-first-section-gap': `${layout.firstSectionGapMm}mm`,
+    '--cv-heading-gap': `${layout.headingGapMm}mm`,
+    '--cv-decoration-gap': `${layout.decorationGapMm}mm`,
+    '--cv-summary-padding': `${layout.summaryPaddingMm}mm`,
+    '--cv-entry-gap': `${layout.entryGapMm}mm`,
+    '--cv-description-gap': `${layout.descriptionGapMm}mm`,
+    '--cv-metadata-gap': `${layout.metadataGapMm}mm`,
     '--cv-accent': accent,
     '--cv-surface': accent === defaultAccentColor ? '#F7F4F0' : mixWithWhite(accent),
     '--cv-header-text': contrastingText(accent),

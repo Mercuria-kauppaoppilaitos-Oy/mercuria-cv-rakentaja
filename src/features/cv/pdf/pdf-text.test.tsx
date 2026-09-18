@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { getDocument, OPS, type PDFDocumentProxy } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import type { TextItem } from 'pdfjs-dist/types/src/display/api';
-import { createLongCvFixture } from '../../../test/cv-fixture';
+import { createLongCvFixture, createShortCvFixture } from '../../../test/cv-fixture';
 import { createEmptyCv, type CvData } from '../cv-model';
 import { createCvPdf } from './create-cv-pdf';
 import { registerPdfFonts } from './pdf-fonts';
@@ -44,6 +44,55 @@ function expectOrder(text: string, expected: string[]) {
     offset = index + value.length;
   }
 }
+
+it('lyhyt Olivia-fixture mahtuu yhdelle sivulle kuvalla ja ilman, myös Kielitaito', async () => {
+  const data = createShortCvFixture();
+  data.appearance.photoDataUrl = `data:image/jpeg;base64,${(await readFile(new URL('../../../../tests/fixtures/cropped-photo.jpg', import.meta.url))).toString('base64')}`;
+  const snapshot = JSON.stringify(data);
+  let text = '';
+  for (const includePhoto of [true, false]) {
+    const result = await readPdf(data, includePhoto);
+    try {
+      expect(result.pages).toHaveLength(1);
+      expectOrder(result.text, ['Olivia Osaaja', 'Liiketoiminnan opiskelija', 'olivia@example.com', 'Esittely', 'TYÖKOKEMUS', 'Myymäläharjoittelija', 'Esimerkkikauppa · 09/2026–11/2026', 'Hyllytys. Siisteys. Palvelin asiakkaita kassalla.', 'Kesätyöntekijä', 'Esimerkki Oy · 06/2026–08/2026', 'KOULUTUS', 'Liiketoiminnan perustutkinto', 'Esimerkkioppilaitos · 08/2024–05/2027', 'OSAAMINEN', 'DIGITAIDOT JA JÄRJESTELMÄT', 'Microsoft 365 – hyvä', 'Procountor – perusteet', 'KIELITAITO', 'Suomi – äidinkieli', 'Englanti – hyvä']);
+      const workText = result.text.slice(result.text.indexOf('TYÖKOKEMUS'), result.text.indexOf('KOULUTUS'));
+      expect(workText).not.toContain('•');
+      expect(result.text.slice(result.text.indexOf('DIGITAIDOT JA JÄRJESTELMÄT'))).not.toContain('•');
+      if (text) expect(result.text).toBe(text);
+      text = result.text;
+      expect(JSON.stringify(data)).toBe(snapshot);
+      const operators = await (await result.document.getPage(1)).getOperatorList();
+      expect(operators.fnArray.filter((operation) => [OPS.paintImageXObject, OPS.paintInlineImageXObject].includes(operation))).toHaveLength(includePhoto ? 1 : 0);
+    } finally { await result.destroy(); }
+  }
+});
+
+it('pitkä Kielitaito-osio jakautuu sivuille ja otsikko pysyy ensimmäisen sisältörivin kanssa', async () => {
+  const data = createShortCvFixture();
+  data.languages = Array.from({ length: 75 }, (_, index) => ({ id: `language-${index}`, name: `Testikieli ${index + 1}`, proficiency: 'Hyvä' as const }));
+  const result = await readPdf(data);
+  try {
+    expect(result.pages.length).toBeGreaterThanOrEqual(2);
+    const first = result.pages.find((page) => page.text.includes('KIELITAITO'))!;
+    expect(first.text).toContain('Testikieli 1 – hyvä');
+    expect(first.text).not.toContain('Testikieli 75 – hyvä');
+    expectOrder(result.text, data.languages.map((entry) => `${entry.name} – hyvä`));
+    expect(result.pages.every((page) => page.text.trim().length > 0)).toBe(true);
+  } finally { await result.destroy(); }
+});
+
+it.each([0, 5, 10, 15, 20, 25, 30])('osio-otsikot eivät jää yksin sivun loppuun eri sivurajoilla: %s', async (extra) => {
+  const data = createShortCvFixture();
+  data.summary += ' Olen huolellinen ja palveluhenkinen sekä haluan oppia työssä uusia taitoja.'.repeat(extra);
+  const result = await readPdf(data);
+  try {
+    for (const heading of ['Esittely', 'TYÖKOKEMUS', 'KOULUTUS', 'OSAAMINEN', 'DIGITAIDOT JA JÄRJESTELMÄT', 'KIELITAITO']) {
+      const page = result.pages.find((page) => page.text.includes(heading))!;
+      expect(page.text.endsWith(heading), heading).toBe(false);
+    }
+    expect(result.pages.every((page) => page.text.trim().length > 0)).toBe(true);
+  } finally { await result.destroy(); }
+});
 
 it('generoi oikean monisivuisen A4-PDF:n ja säilyttää kaiken sisällön ATS-lukujärjestyksessä', async () => {
   const data = createLongCvFixture();

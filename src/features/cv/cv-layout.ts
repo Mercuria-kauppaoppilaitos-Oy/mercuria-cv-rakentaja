@@ -11,3 +11,15 @@ export const cvHeaderLayout = {
   contactMarginMm: 4,
   contactFontSizePt: 10,
 };
+
+/** Shared spacing for a readable single-column document, in millimetres. */
+export const cvContentLayout = {
+  sectionGapMm: 5,
+  firstSectionGapMm: 4,
+  headingGapMm: 2,
+  decorationGapMm: 1.5,
+  summaryPaddingMm: 3,
+  entryGapMm: 4,
+  descriptionGapMm: 1.5,
+  metadataGapMm: 0.5,
+};

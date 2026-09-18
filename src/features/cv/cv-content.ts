@@ -1,7 +1,7 @@
 import type { CvData } from './cv-model';
 
 export type HistoryEntry = CvData['workExperience'][number] | CvData['education'][number];
-export type ContentEntry = { id: string; title: string; lines: string[]; period: string; bullets: string[]; paragraph: string };
+export type ContentEntry = { id: string; title: string; lines: string[]; metadata?: boolean; paragraph: string };
 export type CvSection = { id: string; heading: string } & (
   | { kind: 'summary'; text: string }
   | { kind: 'entries'; entries: ContentEntry[] }
@@ -28,6 +28,12 @@ export function joinDetails(values: string[]): string {
   return values.map((value) => value.trim()).filter(Boolean).join(' – ');
 }
 
+/** Presentation only: retain words and abbreviations without rewriting the draft. */
+export function formatDescription(text: string): string {
+  return text.split(/\r\n|\r|\n/).map((line) => line.trim().replace(/^(?:[•●]\s*|[-*]\s+)/u, '')).filter(Boolean)
+    .map((line) => /[.!?…:;][”’"')\]]*$/u.test(line) ? line : `${line}.`).join(' ');
+}
+
 export function getHistoryEntries(entries: HistoryEntry[]): ContentEntry[] {
   return entries.filter((entry) => {
     const title = 'title' in entry ? entry.title : entry.qualification;
@@ -37,11 +43,10 @@ export function getHistoryEntries(entries: HistoryEntry[]): ContentEntry[] {
     id: entry.id,
     title: ('title' in entry ? entry.title : entry.qualification).trim(),
     lines: [
-      [('employer' in entry ? entry.employer : entry.institution).trim(), entry.location.trim()].filter(Boolean).join(', '),
+      [[('employer' in entry ? entry.employer : entry.institution).trim(), entry.location.trim()].filter(Boolean).join(', '), formatPeriod(entry)].filter(Boolean).join(' · '),
     ].filter(Boolean),
-    period: formatPeriod(entry),
-    bullets: 'title' in entry ? entry.description.split(/\r?\n/).map((line) => line.trim()).filter(Boolean) : [],
-    paragraph: 'title' in entry ? '' : entry.description.trim(),
+    metadata: true,
+    paragraph: 'title' in entry ? formatDescription(entry.description) : entry.description.trim(),
   }));
 }
 
@@ -60,7 +65,7 @@ export function getAdditionalSections(data: CvData): CvSection[] {
     sections.push({ kind: 'notice', heading: 'SUOSITTELIJAT', id: 'cv-references-title', text: 'Suosittelijat saatavilla pyydettäessä' });
   } else if (data.referencesDisplay === 'contact') {
     const entries = data.references.filter((entry) => [entry.name, entry.title, entry.organization, entry.email, entry.phone].some((value) => value.trim())).map((entry) => ({
-      id: entry.id, title: entry.name.trim(), lines: [joinDetails([entry.title, entry.organization]), entry.email.trim(), entry.phone.trim()].filter(Boolean), period: '', bullets: [], paragraph: '',
+      id: entry.id, title: entry.name.trim(), lines: [joinDetails([entry.title, entry.organization]), entry.email.trim(), entry.phone.trim()].filter(Boolean), paragraph: '',
     }));
     if (entries.length) sections.push({ kind: 'entries', heading: 'SUOSITTELIJAT', id: 'cv-references-title', entries });
   }

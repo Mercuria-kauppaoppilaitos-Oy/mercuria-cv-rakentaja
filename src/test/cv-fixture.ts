@@ -1,4 +1,19 @@
 import { createEmptyCv } from '../features/cv/cv-model';
+/** Synthetic short regression CV; not copied from a user's browser draft. */
+export function createShortCvFixture() {
+  const data = createEmptyCv();
+  data.personalDetails = { firstName: 'Olivia', lastName: 'Osaaja', professionalTitle: 'Liiketoiminnan opiskelija', email: 'olivia@example.com', phone: '040 123 4567', city: 'Vantaa', linkedIn: '' };
+  data.summary = 'Olen huolellinen liiketoiminnan opiskelija. Etsin harjoittelupaikkaa, jossa voin käyttää asiakaspalveluosaamistani ja oppia taloushallintoa.';
+  data.workExperience = [
+    { id: 'short-work-1', title: 'Myymäläharjoittelija', employer: 'Esimerkkikauppa', location: '', startDate: '2026-09', endDate: '2026-11', isCurrent: false, description: 'Hyllytys\nSiisteys\nPalvelin asiakkaita kassalla.' },
+    { id: 'short-work-2', title: 'Kesätyöntekijä', employer: 'Esimerkki Oy', location: '', startDate: '2026-06', endDate: '2026-08', isCurrent: false, description: 'Käsittelin tilauksia.\nAutoin asiakkaita ja huolehdin tuotteiden esillepanosta.' },
+  ];
+  data.education = [{ id: 'short-education', qualification: 'Liiketoiminnan perustutkinto', institution: 'Esimerkkioppilaitos', location: '', startDate: '2024-08', endDate: '2027-05', isCurrent: false, description: 'Asiakaspalvelu ja taloushallinto.' }];
+  data.skills = [{ id: 'short-skill-1', name: 'Asiakaspalvelu' }, { id: 'short-skill-2', name: 'Tiimityö' }, { id: 'short-skill-3', name: 'Huolellisuus' }];
+  data.digitalSkills = [{ id: 'short-digital-1', name: 'Microsoft 365', proficiency: 'Hyvä' }, { id: 'short-digital-2', name: 'Procountor', proficiency: 'Perusteet' }];
+  data.languages = [{ id: 'short-language-1', name: 'Suomi', proficiency: 'Äidinkieli' }, { id: 'short-language-2', name: 'Englanti', proficiency: 'Hyvä' }];
+  return data;
+}
 /** Synthetic, long CV shared by HTML and real PDF text-extraction tests. */
 export function createLongCvFixture() {
   const data = createEmptyCv();

@@ -32,7 +32,7 @@ describe('Työkokemus ja koulutus', () => {
     expect(preview().queryByRole('heading', { name: 'KOULUTUS' })).not.toBeInTheDocument();
   });
 
-  it('lisää työkokemuksen, päivittää tiedot ja tekee tehtävistä tekstiluettelon', async () => {
+  it('lisää työkokemuksen, päivittää tiedot ja esittää vanhat tehtävärivit kappaleena', async () => {
     const user = userEvent.setup();
     render(<App />);
     await addEntry(user, 'Lisää työkokemus');
@@ -44,9 +44,10 @@ describe('Työkokemus ja koulutus', () => {
     await user.type(work().getByLabelText('Tehtävät ja saavutukset'), 'Palvelin asiakkaita\n\n Opin kassatyötä');
     expect(preview().getByRole('heading', { name: 'TYÖKOKEMUS' })).toBeVisible();
     expect(preview().getByRole('heading', { name: 'TET-jakso' })).toBeVisible();
-    expect(preview().getByText('Kauppa, Vantaa')).toBeVisible();
-    expect(preview().getByText('08/2023–12/2023')).toBeVisible();
-    expect(preview().getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Palvelin asiakkaita', 'Opin kassatyötä']);
+    expect(preview().getByText('Kauppa, Vantaa · 08/2023–12/2023')).toBeVisible();
+    expect(preview().getByText('Palvelin asiakkaita. Opin kassatyötä.')).toBeVisible();
+    expect(preview().queryByRole('listitem')).not.toBeInTheDocument();
+    expect(work().getByLabelText('Tehtävät ja saavutukset')).toHaveValue('Palvelin asiakkaita\n\n Opin kassatyötä');
   });
 
   it('säilyttää useat työkokemukset erillisinä ja kenttien tunnisteet yksilöllisinä', async () => {
@@ -110,8 +111,7 @@ describe('Työkokemus ja koulutus', () => {
     await user.type(education().getByLabelText('Osaamisala, suuntautuminen tai lyhyt lisätieto'), 'Asiakaspalvelu');
     expect(preview().getByRole('heading', { name: 'KOULUTUS' })).toBeVisible();
     expect(preview().getByRole('heading', { name: 'Merkonomi' })).toBeVisible();
-    expect(preview().getByText('Mercuria, Vantaa')).toBeVisible();
-    expect(preview().getByText('08/2023–05/2026')).toBeVisible();
+    expect(preview().getByText('Mercuria, Vantaa · 08/2023–05/2026')).toBeVisible();
     expect(preview().getByText('Asiakaspalvelu')).toBeVisible();
     await user.click(education().getByRole('button', { name: 'Poista koulutus 1: Merkonomi, Mercuria' }));
     expect(preview().queryByRole('heading', { name: 'KOULUTUS' })).not.toBeInTheDocument();

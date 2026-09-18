@@ -14,7 +14,7 @@ const sections = {
     organizationKey: 'employer', organizationLabel: 'Työnantaja tai organisaatio',
     endLabel: 'Päättymiskuukausi', currentLabel: 'Työskentelen täällä edelleen',
     descriptionLabel: 'Tehtävät ja saavutukset',
-    descriptionHelp: 'Kirjoita yksi tehtävä tai saavutus omalle rivilleen. Esimerkiksi: Palvelin asiakkaita kassalla.',
+    descriptionHelp: 'Kirjoita 2–4 lyhyttä kokonaislausetta tehtävistäsi ja saavutuksistasi. Esimerkiksi: Vastasin tuotteiden hyllytyksestä ja myymälän siisteydestä. Kerro vain, mitä itse teit.',
   },
   education: {
     heading: 'Koulutus',

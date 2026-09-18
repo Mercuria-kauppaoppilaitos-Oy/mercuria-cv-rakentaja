@@ -2,6 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
 import { readFile } from 'node:fs/promises';
 import axe from 'axe-core';
+import { createShortCvFixture } from '../../src/test/cv-fixture';
 const photoPath = fileURLToPath(new URL('../fixtures/photo.png', import.meta.url));
 const key = 'mercuria-cv-draft-v1';
 async function step(page: Page, label: string) { await page.getByRole('navigation', { name: 'CV:n vaiheet' }).getByRole('button', { name: label, exact: true }).click(); }
@@ -244,9 +245,45 @@ test('paikallinen ATS-vertailu lisää vain vahvistetun taidon ja PDF säilyttä
     let text = '';
     for (let number = 1; number <= document.numPages; number++) text += (await (await document.getPage(number)).getTextContent()).items.filter((item) => 'str' in item).map((item) => item.str).join(' ');
     expect(text).toContain('Microsoft Excel'); expect(text).toContain('CRM');
-    expect(text.replace(/\s+/g, ' ').trim()).toBe('Päivi DIGITAIDOT JA JÄRJESTELMÄT • Microsoft Excel • CRM');
+    expect(text.replace(/\s+/g, ' ').trim()).toBe('Päivi DIGITAIDOT JA JÄRJESTELMÄT Microsoft Excel CRM');
     expect(text).not.toMatch(/ERP|ILMOITUSSALAISUUS|Analysoi|Vahvistan|Tarkista tai täydennä/);
   } finally { await task.destroy(); }
+});
+
+test('lyhyen Olivia-luonnoksen HTML ja molemmat PDF-viennit säilyttävät kappaleet ja yhden sivun', async ({ page }, testInfo) => {
+  const data = createShortCvFixture();
+  data.appearance.photoDataUrl = `data:image/jpeg;base64,${(await readFile(fileURLToPath(new URL('../fixtures/cropped-photo.jpg', import.meta.url)))).toString('base64')}`;
+  await page.addInitScript((cvData) => sessionStorage.setItem('mercuria-cv-draft-v1', JSON.stringify({ schemaVersion: 2, persistent: false, data: cvData })), data);
+  await page.goto('/');
+  const work = page.getByRole('region', { name: 'TYÖKOKEMUS' });
+  await expect(work.getByText('Esimerkkikauppa · 09/2026–11/2026', { exact: true })).toBeVisible();
+  await expect(work.getByText('Hyllytys. Siisteys. Palvelin asiakkaita kassalla.', { exact: true })).toBeVisible();
+  await expect(work.getByRole('list')).toHaveCount(0);
+  await step(page, 'Työkokemus');
+  await expect(page.getByLabel('Tehtävät ja saavutukset').nth(0)).toHaveValue('Hyllytys\nSiisteys\nPalvelin asiakkaita kassalla.');
+  await step(page, 'Viimeistele');
+  const { getDocument, OPS } = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  let previousText = '';
+  for (const includePhoto of [true, false]) {
+    await page.getByLabel('Sisällytä valokuva PDF:ään').setChecked(includePhoto);
+    const downloading = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Lataa CV PDF-muodossa' }).click();
+    const download = await downloading;
+    const path = testInfo.outputPath(includePhoto ? 'Olivia_photo.pdf' : 'Olivia_plain.pdf'); await download.saveAs(path);
+    const task = getDocument({ data: new Uint8Array(await readFile(path)) });
+    try {
+      const document = await task.promise; expect(document.numPages).toBe(1);
+      const pdfPage = await document.getPage(1);
+      const text = (await pdfPage.getTextContent()).items.filter((item) => 'str' in item).map((item) => item.str).join(' ').replace(/\s+/g, ' ').trim();
+      expect(text).toContain('Hyllytys. Siisteys. Palvelin asiakkaita kassalla.');
+      expect(text).toContain('KIELITAITO Suomi – äidinkieli Englanti – hyvä');
+      expect(text.slice(text.indexOf('TYÖKOKEMUS'), text.indexOf('KOULUTUS'))).not.toContain('•');
+      if (previousText) expect(text).toBe(previousText);
+      previousText = text;
+      const operators = await pdfPage.getOperatorList();
+      expect(operators.fnArray.some((operation) => [OPS.paintImageXObject, OPS.paintInlineImageXObject].includes(operation))).toBe(includePhoto);
+    } finally { await task.destroy(); }
+  }
 });
 
 test('ATS-tulokset ja pitkät ilmoitukset ovat saavutettavia myös kapeassa asettelussa', async ({ page }) => {

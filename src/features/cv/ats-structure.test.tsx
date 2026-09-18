@@ -21,7 +21,8 @@ it.each([false, true])('säilyttää yhden semanttisen sisältövirran, myös va
   expect(article.querySelectorAll('img')).toHaveLength(photo ? 1 : 0);
   if (photo) expect(article.querySelector('img')).toHaveAttribute('alt', '');
   expect(cv.queryByRole('img', { name: 'Mercuria' })).not.toBeInTheDocument();
-  expect(cv.getAllByRole('listitem').some((item) => item.textContent === 'Palvelin asiakkaita')).toBe(true);
+  expect(cv.getAllByText('Palvelin asiakkaita. Käsittelin verkkokaupan tilauksia. Tuotin sosiaalisen median sisältöä.')).toHaveLength(8);
+  expect(article.querySelector('[aria-labelledby="cv-work-title"] ul')).toBeNull();
   for (const section of article.querySelectorAll(':scope > section')) expect(section.querySelector('h4')).not.toBeNull();
 });
 it('piilottaa tyhjät osiot myös kuvaa ja väriä käytettäessä', () => {
