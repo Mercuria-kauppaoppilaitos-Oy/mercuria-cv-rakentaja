@@ -4,16 +4,18 @@ import type { CvData } from '../cv-model';
 import { getCvSections, getFullName, type ContentEntry, type CvSection } from '../cv-content';
 import { contrastingText, defaultAccentColor, isHexColor, mixWithWhite } from '../color-utils';
 import { getLinkedText } from './pdf-utils';
+import { cvHeaderLayout as layout } from '../cv-layout';
+import type { CvPdfOptions } from './pdf-options';
 
 const mm = (value: number) => value * 72 / 25.4;
 const styles = StyleSheet.create({
   page: { padding: mm(18), fontFamily: 'CvBody', fontSize: 11, lineHeight: 1.6, color: '#292725' },
-  header: { marginTop: -mm(18), marginHorizontal: -mm(18), paddingTop: mm(20), paddingHorizontal: mm(18), paddingBottom: mm(16), flexDirection: 'row', alignItems: 'center', gap: mm(7) },
-  photo: { width: 75, height: 75, borderRadius: 37.5, objectFit: 'cover', flexShrink: 0 },
+  header: { marginTop: -mm(18), marginHorizontal: -mm(18), paddingVertical: mm(layout.paddingMm), paddingHorizontal: mm(18), flexDirection: 'row', alignItems: 'center', gap: mm(layout.gapMm) },
+  photo: { width: mm(layout.photoDiameterMm), height: mm(layout.photoDiameterMm), borderRadius: mm(layout.photoDiameterMm / 2), objectFit: 'cover', flexShrink: 0 },
   nameBlock: { flex: 1, minWidth: 0 },
-  name: { fontFamily: 'CvHeading', fontWeight: 700, fontSize: 30, lineHeight: 1.2 },
-  professionalTitle: { fontSize: 14, marginTop: mm(4) },
-  contacts: { marginTop: mm(6), fontSize: 11, color: '#6F6963' },
+  name: { fontFamily: 'CvHeading', fontWeight: 700, fontSize: layout.nameFontSizePt, lineHeight: 1.2 },
+  professionalTitle: { fontSize: layout.titleFontSizePt, lineHeight: 1.3, marginTop: mm(layout.titleMarginMm) },
+  contacts: { marginTop: mm(layout.contactMarginMm), fontSize: layout.contactFontSizePt, lineHeight: 1.4, color: '#6F6963' },
   // Letter spacing can cause ATS/PDF readers to insert spaces inside Finnish words.
   heading: { fontFamily: 'CvHeading', fontSize: 11.5, fontWeight: 700, marginTop: mm(8), marginBottom: mm(4), paddingBottom: mm(3.5) },
   headingDecoration: { position: 'absolute', bottom: 0, left: 0, width: mm(14), height: mm(1) },
@@ -46,11 +48,18 @@ function Entry({ entry, lineHeight, last }: { entry: ContentEntry; lineHeight: n
 }
 
 function Section({ section, accent, surface, lineHeight }: { section: CvSection; accent: string; surface: string; lineHeight: number }) {
-  return <View wrap>
-    <View style={styles.heading} minPresenceAhead={lineHeight * 2} wrap={false}>
+  const heading = (
+    <View style={styles.heading} minPresenceAhead={lineHeight * 4 + mm(6)} wrap={false}>
       <Text>{section.heading}</Text>
       <View style={[styles.headingDecoration, { backgroundColor: accent }]} />
     </View>
+  );
+  if (section.kind === 'list' && section.items[0] && section.items[0].text.length < 1000) return <View wrap>
+    <View wrap={false}>{heading}<Text style={styles.bullet}>• <LinkedText text={section.items[0].text} /></Text></View>
+    {section.items.slice(1).map((item) => <Text key={item.id} style={styles.bullet} orphans={2} widows={2}>• <LinkedText text={item.text} /></Text>)}
+  </View>;
+  return <View wrap>
+    {heading}
     {section.kind === 'summary' && <Text style={[styles.summary, { backgroundColor: surface }]} orphans={2} widows={2}><LinkedText text={section.text} /></Text>}
     {section.kind === 'notice' && <Text orphans={2} widows={2}>{section.text}</Text>}
     {section.kind === 'list' && section.items.map((item) => <Text key={item.id} style={styles.bullet} orphans={2} widows={2}>• <LinkedText text={item.text} /></Text>)}
@@ -58,17 +67,18 @@ function Section({ section, accent, surface, lineHeight }: { section: CvSection;
   </View>;
 }
 
-export function CvPdfDocument({ data }: { data: CvData }) {
+export function CvPdfDocument({ data, includePhoto = true }: { data: CvData } & CvPdfOptions) {
   const name = getFullName(data.personalDetails);
   const title = data.personalDetails.professionalTitle.trim();
   const accent = isHexColor(data.appearance.accentColor) ? data.appearance.accentColor : defaultAccentColor;
   const surface = accent === defaultAccentColor ? '#F7F4F0' : mixWithWhite(accent);
   const contacts = [data.personalDetails.email, data.personalDetails.phone, data.personalDetails.city, data.personalDetails.linkedIn].map((value) => value.trim()).filter(Boolean);
   const lineHeight = data.appearance.fontSize * data.appearance.lineHeight;
+  const hasPhoto = includePhoto && Boolean(data.appearance.photoDataUrl);
   return <Document title={name ? `${name} – CV` : 'CV'} author={name} subject="Ansioluettelo" language="fi-FI">
     <Page size="A4" wrap style={[styles.page, { fontSize: data.appearance.fontSize, lineHeight: data.appearance.lineHeight, fontFamily: data.appearance.fontFamily === 'serif' ? 'Times-Roman' : 'CvBody' }]}>
-      {(name || title || data.appearance.photoDataUrl) && <View style={[styles.header, { backgroundColor: accent, color: contrastingText(accent) }]} wrap={false}>
-        {data.appearance.photoDataUrl && <Image src={data.appearance.photoDataUrl} style={styles.photo} />}
+      {(name || title || hasPhoto) && <View style={[styles.header, { backgroundColor: accent, color: contrastingText(accent), minHeight: mm(hasPhoto ? layout.photoHeaderHeightMm : layout.plainHeaderHeightMm) }]} wrap={false}>
+        {hasPhoto && <Image src={data.appearance.photoDataUrl} style={styles.photo} />}
         <View style={styles.nameBlock}>
           {name && <Text style={styles.name}>{name}</Text>}
           {title && <Text style={styles.professionalTitle}><LinkedText text={title} color={contrastingText(accent)} /></Text>}

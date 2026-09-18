@@ -7,10 +7,13 @@ export function CvPdfDownloadButton({ data }: { data: CvData }) {
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
+  const [includePhoto, setIncludePhoto] = useState(true);
   const inProgress = useRef(false);
   const active = useRef(true);
   useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
   return <div className="pdf-download">
+    {data.appearance.photoDataUrl && <label className="checkbox-field"><input type="checkbox" checked={includePhoto} disabled={busy} onChange={(event) => setIncludePhoto(event.target.checked)} />Sisällytä valokuva PDF:ään</label>}
+    <p className="field-help">Kuvaton CV on yleensä varmin vaihtoehto sähköisiin rekrytointijärjestelmiin. Valokuva on vapaaehtoinen.</p>
     <button type="button" className="add-button" disabled={busy || !cvSchema.safeParse(data).success} aria-describedby="pdf-privacy pdf-ats" onClick={async () => {
       if (inProgress.current) return;
       inProgress.current = true;
@@ -18,7 +21,7 @@ export function CvPdfDownloadButton({ data }: { data: CvData }) {
       try {
         const snapshot = structuredClone(data);
         const { createCvPdf } = await import('./create-cv-pdf');
-        const blob = await createCvPdf(snapshot);
+        const blob = await createCvPdf(snapshot, { includePhoto });
         if (!active.current) return;
         downloadPdf(blob, getPdfFilename(snapshot.personalDetails));
         setStatus('PDF on valmis. Tiedoston lataus käynnistyi.');

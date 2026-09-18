@@ -62,3 +62,15 @@ it('estää virheellisten CV-tietojen viennin', () => {
   render(<CvPdfDownloadButton data={data} />);
   expect(screen.getByRole('button')).toBeDisabled(); expect(generate).not.toHaveBeenCalled();
 });
+
+it('valokuvavalinta koskee vain vientiä eikä muuta CV-dataa', async () => {
+  const data = createEmptyCv(); data.appearance.photoDataUrl = 'data:image/jpeg;base64,AAAA';
+  const before = JSON.stringify(data);
+  render(<CvPdfDownloadButton data={data} />);
+  const user = userEvent.setup();
+  const checkbox = screen.getByLabelText('Sisällytä valokuva PDF:ään');
+  expect(checkbox).toBeChecked();
+  await user.click(checkbox); await user.click(screen.getByRole('button'));
+  await waitFor(() => expect(generate).toHaveBeenCalledWith(data, { includePhoto: false }));
+  expect(JSON.stringify(data)).toBe(before);
+});

@@ -21,8 +21,8 @@ beforeAll(() => registerPdfFonts({
 }));
 
 type ExtractedPage = { text: string; items: TextItem[]; width: number; height: number };
-async function readPdf(data: CvData): Promise<{ bytes: Uint8Array; document: PDFDocumentProxy; pages: ExtractedPage[]; text: string; destroy: () => Promise<void> }> {
-  const blob = await createCvPdf(data);
+async function readPdf(data: CvData, includePhoto = true): Promise<{ bytes: Uint8Array; document: PDFDocumentProxy; pages: ExtractedPage[]; text: string; destroy: () => Promise<void> }> {
+  const blob = await createCvPdf(data, { includePhoto });
   const bytes = new Uint8Array(await blob.arrayBuffer());
   const task = getDocument({ data: bytes.slice(), useSystemFonts: false, standardFontDataUrl: join(dirname(require.resolve('pdfjs-dist/package.json')), 'standard_fonts').replace(/\\/g, '/') + '/' });
   const document = await task.promise;
@@ -58,7 +58,8 @@ it('generoi oikean monisivuisen A4-PDF:n ja säilyttää kaiken sisällön ATS-l
         expect(item.transform[4]).toBeGreaterThanOrEqual(50);
         expect(item.transform[4] + item.width).toBeLessThanOrEqual(page.width - 49);
         expect(item.transform[5]).toBeGreaterThanOrEqual(45);
-        expect(item.transform[5] + item.height).toBeLessThanOrEqual(page.height - 45);
+        const isHeader = page === result.pages[0] && item.transform[5] > page.height - 90;
+        expect(item.transform[5] + item.height).toBeLessThanOrEqual(page.height - (isHeader ? 18 : 45));
       }
     }
     expectOrder(result.text, [
@@ -77,6 +78,17 @@ it('generoi oikean monisivuisen A4-PDF:n ja säilyttää kaiken sisällön ATS-l
     expect(result.text.match(/Käsittelin verkkokaupan tilauksia/g)).toHaveLength(8);
     expect(result.text.match(/Tuotin sosiaalisen median sisältöä/g)).toHaveLength(8);
     expect(result.text).toContain('08/2023–05/2024');
+    for (let index = 0; index < data.workExperience.length; index++) {
+      const entry = data.workExperience[index]!;
+      const start = result.text.indexOf(entry.title);
+      const end = index + 1 < data.workExperience.length ? result.text.indexOf(data.workExperience[index + 1]!.title, start + entry.title.length) : result.text.indexOf('KOULUTUS', start);
+      const block = result.text.slice(start, end);
+      expectOrder(block, [entry.title, entry.employer, entry.location, `${entry.startDate.slice(5)}/${entry.startDate.slice(0, 4)}`, 'Palvelin asiakkaita', 'Käsittelin verkkokaupan tilauksia', 'Tuotin sosiaalisen median sisältöä']);
+    }
+    for (const entry of data.education) {
+      const block = result.text.slice(result.text.indexOf(entry.qualification));
+      expectOrder(block, [entry.qualification, entry.institution, entry.location, `${entry.startDate.slice(5)}/${entry.startDate.slice(0, 4)}`]);
+    }
     const metadata = (await result.document.getMetadata()).info as { Title: string; Author: string; Subject: string };
     expect(metadata).toMatchObject({ Title: 'Åsa-Maria Ääkkönen-Östergård Pitkänimi – CV', Author: 'Åsa-Maria Ääkkönen-Östergård Pitkänimi', Subject: 'Ansioluettelo' });
     const urls = [];
@@ -85,7 +97,7 @@ it('generoi oikean monisivuisen A4-PDF:n ja säilyttää kaiken sisällön ATS-l
     // No heading may be the final content on its page, and the name is not repeated.
     for (const heading of ['Esittely', 'TYÖKOKEMUS', 'KOULUTUS', 'OSAAMINEN', 'DIGITAIDOT JA JÄRJESTELMÄT', 'KIELITAITO', 'KORTIT JA PÄTEVYYDET', 'SUOSITTELIJAT']) {
       const page = result.pages.find((page) => page.text.includes(heading))!;
-      expect(page.text.endsWith(heading)).toBe(false);
+      expect(page.text.endsWith(heading), heading + " / " + page.text.slice(-180)).toBe(false);
     }
     expect(result.text.match(/Åsa-Maria/g)).toHaveLength(1);
     expect(result.text).not.toMatch(/Mercuria|CV-esikatselu|Muokkaa tietojasi|Lataa CV PDF-muodossa|aino\.esimerkki/);
@@ -139,6 +151,7 @@ it('sivuttaa myös yhden erittäin pitkän luettelokohdan ja säilyttää teksti
 it('valokuva ja eri korostusvärit säilyttävät täsmälleen saman poimittavan tekstin', async () => {
   const data = createEmptyCv(); data.personalDetails = { ...data.personalDetails, firstName: 'Päivi', lastName: 'Määttä', professionalTitle: 'Työpäällikkö' };
   data.summary = 'Ääkköset: ä ö å Ä Ö Å';
+  data.personalDetails.email = 'header@example.com';
   const plain = await readPdf(data);
   try {
     const plainOperators = await (await plain.document.getPage(1)).getOperatorList();
@@ -151,8 +164,49 @@ it('valokuva ja eri korostusvärit säilyttävät täsmälleen saman poimittavan
       expect(withPhoto.text).toBe(plain.text);
       const operators = await (await withPhoto.document.getPage(1)).getOperatorList();
       expect(operators.fnArray.filter((operation) => [OPS.paintImageXObject, OPS.paintInlineImageXObject].includes(operation))).toHaveLength(1);
+      const snapshot = JSON.stringify(data);
+      const excluded = await readPdf(data, false);
+      try {
+        expect(excluded.text).toBe(withPhoto.text);
+        expect(JSON.stringify(data)).toBe(snapshot);
+        const excludedOperators = await (await excluded.document.getPage(1)).getOperatorList();
+        expect(excludedOperators.fnArray.some((operation) => [OPS.paintImageXObject, OPS.paintInlineImageXObject].includes(operation))).toBe(false);
+        const name = excluded.pages[0]!.items.find((item) => item.str.includes('Päivi'))!;
+        expect(name.transform[4]).toBeCloseTo(18 * 72 / 25.4, 1);
+        expect(name.height).toBeCloseTo(20, 1);
+        const contact = excluded.pages[0]!.items.find((item) => item.str.includes('header@example.com'))!;
+        const photoContact = withPhoto.pages[0]!.items.find((item) => item.str.includes('header@example.com'))!;
+        // The photo changes only the header height, by exactly 38 - 31 mm.
+        expect(contact.transform[5] - photoContact.transform[5]).toBeCloseTo(7 * 72 / 25.4, 1);
+        expect(excluded.pages[0]!.height - contact.transform[5]).toBeGreaterThan(35 * 72 / 25.4);
+        expect(excluded.pages[0]!.height - contact.transform[5]).toBeLessThan(40 * 72 / 25.4);
+      } finally { await excluded.destroy(); }
     } finally { await withPhoto.destroy(); }
   } finally { await plain.destroy(); }
+});
+
+it('pitkä kaksiosainen nimi ja ammattinimike kasvattavat ensimmäistä otsaketta sekoittamatta tekstiä', async () => {
+  const data = createEmptyCv();
+  data.personalDetails.firstName = 'Åsa-Maria Päivi';
+  data.personalDetails.lastName = 'Ääkkönen-Östergård Pitkänimi Esimerkkisukunimi';
+  data.personalDetails.professionalTitle = 'Asiakaspalvelun ja verkkokaupan kehittämisen sekä kansainvälisen yhteistyön kokenut ammattilainen';
+  data.personalDetails.email = 'longheader@example.com'; data.summary = 'Seuraava sisältö alkaa yhteystietojen jälkeen.';
+  data.appearance.photoDataUrl = `data:image/jpeg;base64,${(await readFile(new URL('../../../../tests/fixtures/cropped-photo.jpg', import.meta.url))).toString('base64')}`;
+  const result = await readPdf(data);
+  try {
+    expectOrder(result.text, [`${data.personalDetails.firstName} ${data.personalDetails.lastName}`, data.personalDetails.professionalTitle, data.personalDetails.email, 'Esittely', data.summary]);
+    expect(result.pages.length).toBe(1);
+    const contact = result.pages[0]!.items.find((item) => item.str.includes(data.personalDetails.email))!;
+    const headerItems = result.pages[0]!.items.filter((item) => item.str.trim() && item.transform[5] > contact.transform[5]);
+    expect(headerItems.length).toBeGreaterThan(3);
+    for (const item of headerItems) {
+      expect(item.height).toBeGreaterThanOrEqual(10);
+      expect(item.transform[4]).toBeGreaterThan(50);
+      expect(item.transform[4] + item.width).toBeLessThan(result.pages[0]!.width - 49);
+      expect(item.transform[5] + item.height).toBeLessThan(result.pages[0]!.height - 18);
+    }
+    expect(result.text).not.toMatch(/ATS-tarkistus|Työpaikkailmoitus|Analysoi|Vahvistan/);
+  } finally { await result.destroy(); }
 });
 
 it('piilotetut suosittelijat eivät vuoda PDF:ään ja pyydettäessä-tila tulostuu', async () => {

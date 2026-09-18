@@ -163,12 +163,16 @@ test('lataa selaimessa tekstipohjaisen ATS-luettavan PDF:n paikallisesti ja vast
   await page.getByLabel('Etunimi', { exact: true }).fill('Päivi');
   await page.getByLabel('Sukunimi', { exact: true }).fill('Määttä');
   await page.getByLabel('Ammatillinen otsikko').fill('Työpäällikkö');
+  const plainHeight = await page.locator('.cv-masthead').evaluate((element) => parseFloat(getComputedStyle(element).height));
+  expect(plainHeight).toBeCloseTo(31 * 96 / 25.4, 0);
   await page.getByLabel('Sähköposti').fill('paivi@example.com');
   await page.getByLabel('Paikkakunta').fill('Jyväskylä');
   await page.getByLabel('LinkedIn').fill('https://www.linkedin.com/in/pdf-fixture');
   await page.getByLabel('Lisää valokuva').setInputFiles(photoPath);
   await page.getByRole('button', { name: 'Käytä kuvaa' }).click();
   await step(page, 'Esittely');
+  const photoHeight = await page.locator('.cv-masthead').evaluate((element) => parseFloat(getComputedStyle(element).height));
+  expect(photoHeight).toBeCloseTo(38 * 96 / 25.4, 0);
   await page.getByRole('textbox', { name: 'Esittely', exact: true }).fill('Ääkköset: ä ö å Ä Ö Å. Johdan asiakaspalvelua.');
   await step(page, 'Työkokemus');
   await page.getByRole('button', { name: 'Lisää työkokemus' }).click();
@@ -204,4 +208,65 @@ test('lataa selaimessa tekstipohjaisen ATS-luettavan PDF:n paikallisesti ja vast
   await expect(page.getByRole('status')).toContainText('PDF on valmis');
   expect(consoleErrors).toEqual([]);
   expect(requests.filter((url) => !url.startsWith('http://127.0.0.1:4173') && !url.startsWith('data:') && !url.startsWith('blob:'))).toEqual([]);
+});
+
+test('paikallinen ATS-vertailu lisää vain vahvistetun taidon ja PDF säilyttää sen muokkauksen jälkeen', async ({ page }, testInfo) => {
+  await page.goto('/');
+  await page.getByLabel('Etunimi', { exact: true }).fill('Päivi');
+  await step(page, 'Osaaminen');
+  await page.getByRole('button', { name: 'Lisää digitaito', exact: true }).click();
+  await page.getByLabel('Ohjelman tai järjestelmän nimi').fill('Microsoft Excel');
+  await step(page, 'Viimeistele');
+  await page.getByLabel('Työpaikkailmoitus', { exact: true }).fill('Edellytämme Excel ja CRM osaamista. Toivomme ERP. Tarjoamme ILMOITUSSALAISUUS.');
+  await page.getByRole('button', { name: 'Analysoi ilmoitus' }).click();
+  await expect(page.getByRole('heading', { name: 'Ilmoitusvertailun tulokset' })).toBeFocused();
+  await expect(page.getByRole('region', { name: 'Löytyy CV:stä', exact: true }).getByRole('heading', { name: 'Excel', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Lisää ehdotus CV:hen: CRM', exact: true }).click();
+  const add = page.getByRole('button', { name: 'Lisää vahvistettu taito: CRM', exact: true });
+  await expect(add).toBeDisabled();
+  await page.getByLabel('Vahvistan, että tämä vastaa omaa osaamistani tai kokemustani.').check();
+  await add.click();
+  await expect(page.getByRole('region', { name: 'Löytyy CV:stä', exact: true }).getByRole('heading', { name: 'CRM', exact: true })).toBeVisible();
+  await expect.poll(() => page.evaluate((storageKey) => sessionStorage.getItem(storageKey), key)).toContain('CRM');
+  expect(await page.evaluate((storageKey) => sessionStorage.getItem(storageKey), key)).not.toContain('ILMOITUSSALAISUUS');
+  await step(page, 'Osaaminen');
+  await expect(page.getByLabel('Ohjelman tai järjestelmän nimi').nth(0)).toHaveValue('Microsoft Excel');
+  await expect(page.getByLabel('Ohjelman tai järjestelmän nimi').nth(1)).toHaveValue('CRM');
+  await step(page, 'Viimeistele');
+  await expect(page.getByLabel('Työpaikkailmoitus', { exact: true })).toHaveValue('');
+  const downloading = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Lataa CV PDF-muodossa' }).click();
+  const download = await downloading; const path = testInfo.outputPath('approved.pdf'); await download.saveAs(path);
+  const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  const task = getDocument({ data: new Uint8Array(await readFile(path)) });
+  try {
+    const document = await task.promise;
+    let text = '';
+    for (let number = 1; number <= document.numPages; number++) text += (await (await document.getPage(number)).getTextContent()).items.filter((item) => 'str' in item).map((item) => item.str).join(' ');
+    expect(text).toContain('Microsoft Excel'); expect(text).toContain('CRM');
+    expect(text.replace(/\s+/g, ' ').trim()).toBe('Päivi DIGITAIDOT JA JÄRJESTELMÄT • Microsoft Excel • CRM');
+    expect(text).not.toMatch(/ERP|ILMOITUSSALAISUUS|Analysoi|Vahvistan|Tarkista tai täydennä/);
+  } finally { await task.destroy(); }
+});
+
+test('ATS-tulokset ja pitkät ilmoitukset ovat saavutettavia myös kapeassa asettelussa', async ({ page }) => {
+  await page.goto('/'); await step(page, 'Viimeistele');
+  await page.getByLabel('Työpaikkailmoitus', { exact: true }).fill('Edellytämme Excel ja CRM osaamista. Toivomme asiakaspalvelua. Tarjoamme ' + 'pitkä ilmoitus '.repeat(2000));
+  await page.getByRole('button', { name: 'Analysoi ilmoitus' }).click();
+  await page.addScriptTag({ content: axe.source });
+  expect(await page.evaluate(async () => (await (window as unknown as { axe: typeof axe }).axe.run(document)).violations.map((issue) => issue.id))).toEqual([]);
+  for (const width of [320, 720]) {
+    await page.setViewportSize({ width, height: 700 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await step(page, 'Perustiedot');
+  await page.getByLabel('Etunimi', { exact: true }).fill('Åsa-Maria Päivi');
+  await page.getByLabel('Sukunimi', { exact: true }).fill('Ääkkönen-Östergård Pitkänimi Esimerkkisukunimi');
+  await page.getByLabel('Ammatillinen otsikko').fill('Asiakaspalvelun ja verkkokaupan kehittämisen sekä kansainvälisen yhteistyön kokenut ammattilainen');
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.getByRole('button', { name: 'Esikatselu', exact: true }).click();
+  await expect(page.locator('.cv-name')).toContainText('Åsa-Maria Päivi');
+  expect(await page.locator('.cv-masthead').evaluate((element) => element.scrollHeight <= element.clientHeight + 1)).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
