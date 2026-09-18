@@ -1,4 +1,4 @@
-﻿# Mercuria CV
+# Mercuria CV
 
 Suomenkielinen selainpohjainen CV-rakentaja, joka käyttää Reactia, TypeScriptiä ja Viteä. Perustietojen, esittelyn, työkokemusten, koulutusten, osaamisen, digitaitojen, kielten, pätevyyksien ja suosittelijoiden lisäksi voit valita CV:n korostusvärin ja lisätä vapaaehtoisen valokuvan.
 
@@ -55,19 +55,21 @@ Oletuksena luonnos tallentuu sessionStorageen 400 ms viiveellä ja palautuu sama
 
 Viimeistele-vaiheen Säilytä luonnos tällä laitteella siirtää luonnoksen localStorageen ja poistaa istuntokopion. Asetus säilyy luonnoksen mukana. Valinnan poistaminen poistaa pysyvän kopion heti, säilyttää lomakedatan ja jatkaa istuntotallennusta. Pysyvää tallennusta ei suositella yhteiskäyttöisellä tietokoneella. Tallennustavan käyttöönottoa varten virheelliset kentät on korjattava.
 
-Tallennus käyttää vain avainta mercuria-cv-draft-v1 ja versionumeroitua rakennetta { schemaVersion: 1, persistent, data }. Palautus validoidaan nykyisellä Zod-skeemalla, myös ulkoasu ja kuvan dataosoite. Virheellinen tai vanhentunut luonnos palauttaa turvallisesti tyhjän oletustilan ja ilmoituksen. Viimeisin kelvollinen lomakedata tallennetaan; keskeneräiset virheelliset kentät eivät korvaa aiempaa kelvollista luonnosta.
+Tallennus käyttää vain avainta mercuria-cv-draft-v1 ja versionumeroitua rakennetta { schemaVersion: 2, persistent, data }. Palautus validoidaan nykyisellä Zod-skeemalla, myös ulkoasu ja kuvan dataosoite. Version 1 luonnokset migroidaan säilyttäen kuva ja korostusväri; vanhat kohdistusarvot poistuvat. Virheellinen tai tuntemattoman version luonnos palauttaa turvallisesti tyhjän oletustilan ja ilmoituksen. Viimeisin kelvollinen lomakedata tallennetaan; keskeneräiset virheelliset kentät eivät korvaa aiempaa kelvollista luonnosta.
 
 Tallennustilan loppuminen tai selaimen estämä tallennus ei kaada sovellusta eikä poista avoimen lomakkeen tietoja. Virheilmoitus ehdottaa kuvan poistamista tai pysyvän tallennuksen poistamista käytöstä. Selainluonnos ei korvaa myöhempää tiedostovientiä tai varmuuskopiota.
 
-Tyhjennä kaikki tiedot avaa vahvistusdialogin. Peruuttaminen ja Escape säilyttävät tiedot ja palauttavat fokuksen avaavaan painikkeeseen. Fokus pysyy dialogin sisällä ja taustatoiminnot ovat inert. Vahvistus poistaa tämän sovelluksen luonnokset molemmista tallennuksista, nollaa lomakkeen, kuvan, kohdistuksen ja värin, palauttaa ensimmäisen vaiheen sekä näyttää statusviestin. Tyhjä luonnos ei synny uudelleen ennen seuraavaa muokkausta. Jos selain estää poistamisen, siitä ilmoitetaan erikseen.
+Tyhjennä kaikki tiedot avaa vahvistusdialogin. Peruuttaminen ja Escape säilyttävät tiedot ja palauttavat fokuksen avaavaan painikkeeseen. Fokus pysyy dialogin sisällä ja taustatoiminnot ovat inert. Vahvistus poistaa tämän sovelluksen luonnokset molemmista tallennuksista, nollaa lomakkeen, kuvan ja värin, palauttaa ensimmäisen vaiheen sekä näyttää statusviestin. Tyhjä luonnos ei synny uudelleen ennen seuraavaa muokkausta. Jos selain estää poistamisen, siitä ilmoitetaan erikseen.
 
 ## Valokuva ja värivalinta
 
 Kuva on vapaaehtoinen eikä sitä tarvita ATS-järjestelmiä varten. Alkuperäinen JPEG-, PNG- tai WebP-tiedosto saa olla enintään 5 Mt (5 × 1024 × 1024 tavua). Tarkistukset sisältävät MIME-tyypin, tiedoston tunnisteen, koon ja todellisen purkamisen kuvaksi. Rikkinäinen tai väärä kuva saa ymmärrettävän, kenttään kytketyn virheviestin.
 
-Kuva rajataan keskeltä neliöksi, pienennetään enintään kokoon 512 × 512 px ja renderöidään selaimessa uudelleen JPEG-muotoon. Läpinäkyvyys täytetään valkoisella, eikä alkuperäisen kuvan metatietoja tai tiedostonimeä tallenneta. Tavoitteena on enintään noin 350–400 kt; käsittely hyväksyy enintään 400 kt:n kuvan. Bitmap vapautetaan käsittelyn jälkeen. Object URL -osoitteita ei käytetä.
+Tiedoston valinta avaa saavutettavan “Rajaa valokuva” -dialogin. Alkuperäistä kuvaa siirretään hiirellä, kosketuksella tai nuolinäppäimillä pyöreän maskin sisällä. Ainoa säätöliuku on Zoomaus (1–3). Sarkain siirtää fokuksen kuvaan; Shift + nuolinäppäin mahdollistaa tarkan siirron. Natiivi modaalinen dialogi pitää fokuksen sisällä, estää taustatoiminnot ja lukitsee sivun vierityksen. Peruuta ja Escape säilyttävät aiemman kuvan ja palauttavat fokuksen valintapainikkeeseen.
 
-Lomakkeessa kuvaa voi vaihtaa, poistaa ja kohdistaa kahdella 0–100 % säätimellä. Oletuskohdistus on 50/50. Pieni kohdistusvara saavutetaan näyttämällä käsiteltyä kuvaa hieman suurennettuna pyöreän rajauksen sisällä. CV:ssä kuva on 100 px täysikokoisella A4-arkilla, nimen vasemmalla puolella, object-fit: cover -asetuksella ja tyhjällä alt-tekstillä. Muut CV-osiot pysyvät yhdessä palstassa. Lomake-esikatselun kuvalla on ymmärrettävä alt-teksti.
+Vasta Käytä kuvaa leikkaa alkuperäisestä kuvasta editorin croppedAreaPixels-alueen, pienentää neliön enintään kokoon 512 × 512 px ja pakkaa JPEG-muotoon enintään 400 KiB. Läpinäkyvyys täytetään valkoisella ja metatiedot poistuvat canvas-uudelleenrenderöinnissä. Selaimen kuvapurku huomioi EXIF-orientaation. Bitmap ja dialogin alkuperäistä kuvaa varten luotu object URL vapautetaan käytön jälkeen. Luonnokseen tallennetaan vain valmis kuva, ei alkuperäistä tiedostoa.
+
+Kuvaa voi vaihtaa ja poistaa. CV:ssä valmis kuva on pyöreä, 100 px täysikokoisella A4-arkilla, nimen vasemmalla puolella, object-fit: cover ja object-position: center -asetuksilla sekä tyhjällä alt-tekstillä. Lomake-esikatselun kuvalla on ymmärrettävä alt-teksti. Vanhoja vaaka- ja pystykohdistussäätimiä ei enää ole.
 
 Oletuskorostusväri #E9E1D8 määritellään keskitetysti. Värivalitsin ja HEX-kenttä ovat synkronoituja. Hyväksytty muoto on #RRGGBB. Virheellinen teksti saa saavutettavan virheen, ja esikatselu käyttää silloin turvallista beigeä. Väri vaikuttaa vain CV:n otsakealueeseen, profiilin hienovaraiseen taustaan ja koristeisiin. Ylätunnisteen musta tai valkoinen tekstiväri valitaan todellisen suhteellisen luminanssin ja kontrastisuhteen perusteella; parempi vaihtoehto saavuttaa vähintään 4.5:1-kontrastin. Vaaleat sävyt muodostetaan TypeScriptissä HEX-arvoina, jotta niitä voi käyttää myöhemmin PDF:ssä.
 
@@ -96,10 +98,11 @@ Varsinaiset PDF:n pdftotext- ja PDF.js-tekstinpoimintatestit toteutetaan PDF-gen
 - CvForm, CvHistoryFields ja CvAdditionalFields: vaiheittainen lomake ja useFieldArray-listat.
 - CvAppearanceControls, CvPhotoUpload ja CvDraftControls: ulkoasun ja luonnoksen käyttöliittymä.
 - color-utils, image-utils, draft-storage ja useDraftStorage: värilaskenta, kuvan turvallinen käsittely ja versionoitu tallennus.
+- CvPhotoCropDialog: alkuperäisen kuvan visuaalinen rajaus ja vahvistus; React 19:n JSX-tyyppiyhteensopivuus on src/react-easy-crop-compat.d.ts-tiedostossa.
 - ClearDraftDialog: vahvistus ja näppäimistökohdistuksen hallinta.
 - CvPreview, CvHeader, CvPhoto ja CvSheet: sisältö, valokuva, A4-geometria ja reaaliaikainen esikatselu.
 - tests/e2e, playwright.config.ts ja tests/fixtures: selaintestit ja pieni keinotekoinen testikuva.
 
-React Hook Form, Zod ja resolvers toteuttavat lomaketilan ja validoinnin; paikalliset fonttipaketit toimittavat typografian. Kuvankäsittely ja tallennus käyttävät selaimen omia rajapintoja, eivät uusia tuotantoriippuvuuksia. Playwright ja axe-core ovat kehitysriippuvuuksia pyydettyyn selain- ja saavutettavuustestaukseen.
+React Hook Form, Zod ja resolvers toteuttavat lomaketilan ja validoinnin; paikalliset fonttipaketit toimittavat typografian. react-easy-crop toteuttaa visuaalisen rajauksen hiiri-, kosketus- ja näppäimistötuella. Lopullinen kuvankäsittely ja tallennus käyttävät selaimen omia rajapintoja. Playwright ja axe-core ovat kehitysriippuvuuksia pyydettyyn selain- ja saavutettavuustestaukseen.
 
 Sovellus ei tarvitse API-avaimia. Älä laita salaisuuksia selaimelle toimitettavaan koodiin tai VITE_-muuttujiin. Mahdolliset salaisuudet pidetään paikallisessa .env-tiedostossa ja muuttujat dokumentoidaan .env.example-tiedostoon ilman oikeita arvoja.

@@ -12,10 +12,10 @@ function chunk(type, data) {
   const checksum = Buffer.alloc(4); checksum.writeUInt32BE((crc ^ 0xffffffff) >>> 0);
   return Buffer.concat([length, bytes, checksum]);
 }
-const header = Buffer.alloc(13); header.writeUInt32BE(64); header.writeUInt32BE(64, 4); header[8] = 8; header[9] = 2;
-const pixels = Buffer.alloc(64 * (1 + 64 * 3));
-for (let y = 0; y < 64; y++) for (let x = 0; x < 64; x++) {
-  const index = y * 193 + 1 + x * 3;
-  pixels[index] = x < 32 ? 160 : 225; pixels[index + 1] = y < 32 ? 180 : 205; pixels[index + 2] = 180;
+const header = Buffer.alloc(13); header.writeUInt32BE(192); header.writeUInt32BE(64, 4); header[8] = 8; header[9] = 2;
+const pixels = Buffer.alloc(64 * (1 + 192 * 3));
+for (let y = 0; y < 64; y++) for (let x = 0; x < 192; x++) {
+  const index = y * 577 + 1 + x * 3;
+  pixels[index] = x < 24 ? 240 : 30; pixels[index + 1] = x < 24 ? 30 : 180; pixels[index + 2] = 180;
 }
 writeFileSync(new URL('photo.png', import.meta.url), Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', header), chunk('IDAT', deflateSync(pixels)), chunk('IEND', Buffer.alloc(0))]));

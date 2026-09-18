@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { createEmptyCv, cvSchema, type CvData } from './cv-model';
 
 export const draftStorageKey = 'mercuria-cv-draft-v1';
-const envelopeSchema = z.object({ schemaVersion: z.literal(1), persistent: z.boolean(), data: cvSchema });
+const envelopeSchema = z.object({ schemaVersion: z.union([z.literal(1), z.literal(2)]), persistent: z.boolean(), data: cvSchema });
 export const storageErrorMessage = 'Luonnoksen tallennus ei onnistunut. Selaimen tallennustila voi olla täynnä tai estetty. Poista kuva tai poista pysyvä tallennus käytöstä. Nykyiset tiedot ovat edelleen lomakkeessa.';
 
 export function loadDraft(): { data: CvData; persistent: boolean; restored: boolean; error: string } {
@@ -28,7 +28,7 @@ export function saveDraft(data: CvData, persistent: boolean): string {
     const target = persistent ? localStorage : sessionStorage;
     const other = persistent ? sessionStorage : localStorage;
     // Keep the previous valid copy if the new storage write exceeds its quota.
-    target.setItem(draftStorageKey, JSON.stringify({ schemaVersion: 1, persistent, data }));
+    target.setItem(draftStorageKey, JSON.stringify({ schemaVersion: 2, persistent, data: cvSchema.parse(data) }));
     other.removeItem(draftStorageKey);
     return '';
   } catch { return storageErrorMessage; }

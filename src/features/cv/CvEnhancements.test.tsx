@@ -28,31 +28,12 @@ it('synkronoi värikentät, näyttää virheen ja palauttaa oletusvärin', async
   expect(hex).toHaveAttribute('aria-invalid', 'false');
 });
 
-it('lisää, kohdistaa ja poistaa käsitellyn kuvan yhteisessä lomaketilassa', async () => {
-  vi.spyOn(imageUtils, 'processPhoto').mockResolvedValue(photo);
-  const user = userEvent.setup();
-  render(<App />);
-  await user.upload(screen.getByLabelText('Lisää valokuva'), new File(['photo'], 'photo.png', { type: 'image/png' }));
-  expect(await screen.findByRole('img', { name: 'Lisätyn valokuvan esikatselu' })).toBeVisible();
-  const cvPhoto = screen.getByRole('article').querySelector('img')!;
-  expect(cvPhoto).toHaveAttribute('alt', '');
-  fireEvent.change(screen.getByLabelText('Vaakakohdistus'), { target: { value: '80' } });
-  fireEvent.change(screen.getByLabelText('Pystykohdistus'), { target: { value: '20' } });
-  expect(cvPhoto.style.left).toBe('-16%'); expect(cvPhoto.style.top).toBe('-4%');
-  await selectStep(user, 'Esittely'); await selectStep(user, 'Perustiedot');
-  expect(screen.getByLabelText('Vaakakohdistus')).toHaveValue('80');
-  expect(screen.getByLabelText('Vaihda kuva')).toBeInTheDocument();
-  await user.click(screen.getByRole('button', { name: 'Poista kuva' }));
-  expect(screen.getByRole('article').querySelector('img')).toBeNull();
-  expect(screen.queryByLabelText('Vaakakohdistus')).not.toBeInTheDocument();
-});
-
 it.each([
   ['Väärä muoto', 'Valitse JPEG-, PNG- tai WebP-kuva.'],
   ['Liian suuri', 'Kuva on liian suuri. Enimmäiskoko on 5 Mt.'],
   ['Rikkinäinen', 'Kuvaa ei voitu avata.'],
 ])('näyttää kuvan virheen saavutettavasti: %s', async (_, message) => {
-  vi.spyOn(imageUtils, 'processPhoto').mockRejectedValue(new Error(message));
+  vi.spyOn(imageUtils, 'validatePhoto').mockRejectedValue(new Error(message));
   const user = userEvent.setup();
   render(<App />);
   await user.upload(screen.getByLabelText('Lisää valokuva'), new File(['photo'], 'photo.png', { type: 'image/png' }));

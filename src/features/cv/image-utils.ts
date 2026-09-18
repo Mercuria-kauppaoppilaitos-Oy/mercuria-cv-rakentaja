@@ -14,22 +14,29 @@ async function verifySignature(file: File) {
     : String.fromCharCode(...bytes.slice(0, 4)) === 'RIFF' && String.fromCharCode(...bytes.slice(8, 12)) === 'WEBP';
   if (!matches) throw new Error('Kuvatiedosto on rikkinäinen tai sen sisältö ei vastaa tiedostotyyppiä.');
 }
-export async function processPhoto(file: File): Promise<string> {
+export type PhotoCrop = { x: number; y: number; width: number; height: number };
+
+export async function validatePhoto(file: File): Promise<void> {
   validateImageFile(file);
   await verifySignature(file);
+}
+
+export async function processPhoto(file: File, area: PhotoCrop): Promise<string> {
+  await validatePhoto(file);
   let bitmap: ImageBitmap;
-  try { bitmap = await createImageBitmap(file); }
+  try { bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' }); }
   catch { throw new Error('Kuvaa ei voitu avata. Valitse ehjä JPEG-, PNG- tai WebP-kuva.'); }
   try {
     if (!bitmap.width || !bitmap.height) throw new Error('Kuva on rikkinäinen.');
-    const crop = Math.min(bitmap.width, bitmap.height);
+    if (!Object.values(area).every(Number.isFinite) || area.x < 0 || area.y < 0 || area.width <= 0 || area.height <= 0 || Math.abs(area.width - area.height) > 1 || area.x + area.width > bitmap.width || area.y + area.height > bitmap.height) throw new Error('Kuvan rajaus ei kelpaa.');
+    const crop = Math.min(area.width, area.height);
     const canvas = document.createElement('canvas');
-    canvas.width = canvas.height = Math.min(512, crop);
+    canvas.width = canvas.height = Math.max(1, Math.min(512, Math.round(crop)));
     const context = canvas.getContext('2d');
     if (!context) throw new Error('Selain ei tue kuvan käsittelyä.');
     context.fillStyle = '#ffffff';
     context.fillRect(0, 0, canvas.width, canvas.height);
-    context.drawImage(bitmap, (bitmap.width - crop) / 2, (bitmap.height - crop) / 2, crop, crop, 0, 0, canvas.width, canvas.height);
+    context.drawImage(bitmap, area.x, area.y, crop, crop, 0, 0, canvas.width, canvas.height);
     for (const quality of [0.88, 0.75, 0.6, 0.45]) {
       const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
       if (blob && blob.size <= maxProcessedImageBytes) {

@@ -10,7 +10,7 @@ it('tallentaa ja palauttaa istuntoluonnoksen väreineen ja kuvineen', () => {
   expect(saveDraft(data, false)).toBe('');
   expect(localStorage.getItem(draftStorageKey)).toBeNull();
   expect(loadDraft()).toMatchObject({ data, restored: true, persistent: false });
-  expect(JSON.parse(sessionStorage.getItem(draftStorageKey)!).schemaVersion).toBe(1);
+  expect(JSON.parse(sessionStorage.getItem(draftStorageKey)!).schemaVersion).toBe(2);
 });
 it('siirtää luonnoksen tallennusten välillä ja poistaa molemmat turvallisesti', () => {
   const data = createEmptyCv();
@@ -49,4 +49,13 @@ it('säilyttää aiemman istuntoluonnoksen, jos pysyvän tallennuksen käyttöö
   expect(saveDraft(data, true)).toContain('tallennustila');
   expect(sessionStorage.getItem(draftStorageKey)).toContain('Aino');
   expect(localStorage.getItem(draftStorageKey)).toBeNull();
+});
+it.each([false, true])('migroi version 1 kuvan ja värin poistamalla kohdistusarvot (persistent=%s)', (persistent) => {
+  const data = createEmptyCv(); data.appearance.photoDataUrl = 'data:image/jpeg;base64,/9j/AA=='; data.appearance.accentColor = '#203040';
+  const legacy = { ...data, appearance: { ...data.appearance, photoPositionX: 80, photoPositionY: 20 } };
+  (persistent ? localStorage : sessionStorage).setItem(draftStorageKey, JSON.stringify({ schemaVersion: 1, persistent, data: legacy }));
+  const restored = loadDraft(); expect(restored).toMatchObject({ restored: true, persistent, data });
+  expect(restored.data.appearance).not.toHaveProperty('photoPositionX'); expect(restored.data.appearance).not.toHaveProperty('photoPositionY');
+  saveDraft(restored.data, persistent);
+  expect(JSON.parse((persistent ? localStorage : sessionStorage).getItem(draftStorageKey)!).schemaVersion).toBe(2);
 });

@@ -1,4 +1,4 @@
-﻿* { box-sizing: border-box; }
+* { box-sizing: border-box; }
 body { margin: 0; }
 h1, h2, h3, h4, p { margin: 0; }
 input, textarea, select, button { font: inherit; }
@@ -185,7 +185,7 @@ button:disabled { cursor: default; opacity: .5; }
 .cv-masthead .cv-title, .cv-masthead .example-text { color: var(--cv-header-text); }
 .cv-masthead .example-text { font-style: italic; }
 .cv-photo-frame { display: inline-block; position: relative; overflow: hidden; border-radius: 50%; width: 100px; height: 100px; flex-shrink: 0; }
-.cv-photo-frame img { display: block; position: absolute; width: 120%; height: 120%; max-width: none; object-fit: cover; }
+.cv-photo-frame img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
 .photo-controls > .cv-photo-frame { display: block; margin-top: 1rem; }
 .photo-controls input[type='range'] { padding: 0; }
 .photo-controls label { margin-top: .75rem; }
@@ -202,3 +202,10 @@ button:disabled { cursor: default; opacity: .5; }
 .clear-dialog p { margin-top: 1rem; }
 .dialog-actions { display: flex; gap: .75rem; flex-wrap: wrap; margin-top: 1.5rem; }
 .dialog-actions .remove-button { margin: 0; }
+.photo-crop-dialog { border: 0; border-radius: .75rem; padding: 1.25rem; margin: auto; width: min(440px, calc(100vw - 2rem)); max-width: calc(100vw - 2rem); max-height: 90dvh; overflow-y: auto; }
+.photo-crop-dialog::backdrop { background: #16253699; }
+.photo-crop-dialog p { margin: .75rem 0; }
+.photo-crop-area { position: relative; width: 100%; height: min(400px, 42dvh); min-height: 120px; background: #162536; margin: 1rem 0; }
+.photo-crop-area [tabindex]:focus-visible { outline: 3px solid #fff; outline-offset: -4px; }
+.photo-crop-dialog .dialog-actions { margin-top: .75rem; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }

@@ -29,7 +29,6 @@ export const cvSchema = z.object({
     fontFamily: z.enum(['sans-serif', 'serif']), fontSize: z.number().positive().max(30), lineHeight: z.number().positive().max(3),
     accentColor: z.string().regex(/^#[\da-f]{6}$/i, 'Anna väri muodossa #RRGGBB.'),
     photoDataUrl: z.string().max(560000).regex(/^$|^data:image\/(jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/, 'Kuvan tiedot eivät kelpaa.'),
-    photoPositionX: z.number().min(0).max(100), photoPositionY: z.number().min(0).max(100),
   }),
 });
 export type CvData = z.infer<typeof cvSchema>;
@@ -54,6 +53,6 @@ export function createEmptyCv(): CvData {
   return {
     personalDetails: { firstName: '', lastName: '', professionalTitle: '', email: '', phone: '', city: '', linkedIn: '' },
     summary: '', workExperience: [], education: [], skills: [], digitalSkills: [], languages: [], certifications: [], references: [], referencesDisplay: 'contact',
-    template: 'single-column', appearance: { fontFamily: 'sans-serif', fontSize: 11, lineHeight: 1.6, accentColor: defaultAccentColor, photoDataUrl: '', photoPositionX: 50, photoPositionY: 50 },
+    template: 'single-column', appearance: { fontFamily: 'sans-serif', fontSize: 11, lineHeight: 1.6, accentColor: defaultAccentColor, photoDataUrl: '' },
   };
 }

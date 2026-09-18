@@ -11,6 +11,8 @@ test('luonnos, väri ja käsitelty kuva palautuvat, poistuvat ja tyhjennys poist
   await page.getByLabel('Sukunimi', { exact: true }).fill('Åström');
   await page.getByLabel('Ammatillinen otsikko').fill('Myyjä');
   await page.getByLabel('Lisää valokuva').setInputFiles(photoPath);
+  await expect(page.getByRole('dialog', { name: 'Rajaa valokuva' })).toBeVisible();
+  await page.getByRole('button', { name: 'Käytä kuvaa' }).click();
   await expect(page.getByRole('img', { name: 'Lisätyn valokuvan esikatselu' })).toBeVisible();
   await step(page, 'Työkokemus');
   await page.getByRole('button', { name: 'Lisää työkokemus' }).click();
@@ -58,6 +60,8 @@ test('390 px mobiilissa vaihevalinta, valokuva ja näkymävaihtaja toimivat', as
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await page.getByLabel('Lisää valokuva').setInputFiles(photoPath);
+  await expect(page.getByRole('dialog', { name: 'Rajaa valokuva' })).toBeVisible();
+  await page.getByRole('button', { name: 'Käytä kuvaa' }).click();
   await expect(page.getByRole('button', { name: 'Poista kuva' })).toBeVisible();
   await page.getByLabel('Vaihe 1 / 7').selectOption('1');
   await page.getByRole('textbox', { name: 'Esittely', exact: true }).fill('Palvelen asiakkaita.');
@@ -87,8 +91,9 @@ test('320 px leveydessä kaikki vaiheet ja esikatselu mahtuvat, myös 200 % zoom
 });
 
 test('Chromiumin axe-tarkistus sisältää värikontrastin, kuvan, värivalitsimen, tallennuksen ja dialogin', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   const externalRequests: string[] = [];
-  page.on('request', (request) => { if (!request.url().startsWith('http://127.0.0.1:4173') && !request.url().startsWith('data:')) externalRequests.push(request.url()); });
+  page.on('request', (request) => { if (!request.url().startsWith('http://127.0.0.1:4173') && !request.url().startsWith('data:') && !request.url().startsWith('blob:')) externalRequests.push(request.url()); });
   await page.goto('/');
   await page.addScriptTag({ content: axe.source });
   const violations = () => page.evaluate(async () => {
@@ -96,6 +101,9 @@ test('Chromiumin axe-tarkistus sisältää värikontrastin, kuvan, värivalitsim
     return (await runner.run(document)).violations.map((issue) => ({ id: issue.id, elements: issue.nodes.map((node) => node.target) }));
   });
   await page.getByLabel('Lisää valokuva').setInputFiles(photoPath);
+  await expect(page.getByRole('dialog', { name: 'Rajaa valokuva' })).toBeVisible();
+  expect(await violations()).toEqual([]);
+  await page.getByRole('button', { name: 'Käytä kuvaa' }).click();
   await expect(page.getByRole('button', { name: 'Poista kuva' })).toBeVisible();
   expect(await violations()).toEqual([]);
   await step(page, 'Viimeistele');
@@ -105,4 +113,41 @@ test('Chromiumin axe-tarkistus sisältää värikontrastin, kuvan, värivalitsim
   await page.getByRole('button', { name: 'Tyhjennä kaikki tiedot' }).click();
   expect(await violations()).toEqual([]);
   expect(externalRequests).toEqual([]);
+});
+
+test('reunakohteen rajaus raahaamalla ja näppäimistöllä säilyy sekä mobiilidialogi mahtuu', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Lisää valokuva').setInputFiles(photoPath);
+  const dialog = page.getByRole('dialog', { name: 'Rajaa valokuva' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('slider')).toHaveCount(1);
+  const area = page.getByLabel('Siirrä kuvaa', { exact: true });
+  const bounds = (await area.boundingBox())!;
+  await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+  await page.mouse.down(); await page.mouse.move(bounds.x + bounds.width - 5, bounds.y + bounds.height / 2, { steps: 10 }); await page.mouse.up();
+  await dialog.getByLabel('Zoomaus').fill('1.2');
+  await area.focus();
+  for (let i = 0; i < 100; i++) await page.keyboard.press('ArrowRight');
+  await page.getByRole('button', { name: 'Käytä kuvaa' }).click();
+  await expect(page.locator('.cv-page img')).toBeVisible();
+  const saved = await page.locator('.cv-page img').getAttribute('src');
+  const pixels = await page.evaluate(async (src) => {
+    const image = new Image(); image.src = src!; await image.decode();
+    const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
+    const context = canvas.getContext('2d')!; context.drawImage(image, 0, 0);
+    return { width: image.width, height: image.height, left: Array.from(context.getImageData(2, image.height / 2, 1, 1).data) };
+  }, saved);
+  expect(pixels.width).toBe(pixels.height); expect(pixels.left[0]).toBeGreaterThan(200); expect(pixels.left[1]).toBeLessThan(60);
+  await expect.poll(() => page.evaluate((storageKey) => sessionStorage.getItem(storageKey), key)).toContain(saved!);
+  await page.reload(); await expect(page.locator('.cv-page img')).toHaveAttribute('src', saved!);
+  for (const viewport of [{ width: 390, height: 844 }, { width: 320, height: 500 }, { width: 720, height: 500 }]) {
+    await page.setViewportSize(viewport);
+    await page.getByLabel('Vaihda kuva').setInputFiles(photoPath);
+    await expect(dialog).toBeVisible();
+    const box = (await dialog.boundingBox())!; expect(box.height).toBeLessThanOrEqual(viewport.height * .9 + 1);
+    for (const name of ['Peruuta', 'Käytä kuvaa']) { const button = (await dialog.getByRole('button', { name }).boundingBox())!; expect(button.y + button.height).toBeLessThanOrEqual(viewport.height); }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.keyboard.press('Escape'); await expect(dialog).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Vaihda kuva' })).toBeFocused();
+  }
 });
