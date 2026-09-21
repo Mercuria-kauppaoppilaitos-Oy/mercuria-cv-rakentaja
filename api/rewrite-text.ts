@@ -1,5 +1,5 @@
-import { handleRewriteRequest } from '../server/rewrite-handler';
-import { loadLocalEnvironment } from '../server/local-env';
+import { handleRewriteRequest } from '../server/rewrite-handler.js';
+import { loadLocalEnvironment } from '../server/local-env.js';
 
 loadLocalEnvironment();
 

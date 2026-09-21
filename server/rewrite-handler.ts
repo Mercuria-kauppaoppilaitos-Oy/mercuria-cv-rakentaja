@@ -2,8 +2,8 @@ import OpenAI from 'openai';
 import { APIConnectionTimeoutError } from 'openai/core/error';
 import { zodTextFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
-import { rewriteMessages, rewriteRequestSchema, rewriteResponseSchema } from '../shared/rewrite-contract';
-import { rewritePrompts } from './rewrite-prompts';
+import { rewriteMessages, rewriteRequestSchema, rewriteResponseSchema } from '../shared/rewrite-contract.js';
+import { rewritePrompts } from './rewrite-prompts.js';
 
 export const rewriteTimeoutMs = 15_000;
 export const maxRewriteBodyBytes = 8192;

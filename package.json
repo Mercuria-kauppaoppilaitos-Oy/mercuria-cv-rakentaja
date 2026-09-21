@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite",
     "dev:full": "vercel dev --local --listen 127.0.0.1:3000",
-    "build": "tsc --noEmit && vite build && node scripts/check-client-build.mjs",
+    "build": "tsc --noEmit && tsc --project tsconfig.server.json --noEmit && vite build && node scripts/check-client-build.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
