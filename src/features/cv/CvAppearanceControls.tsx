@@ -13,6 +13,6 @@ export function CvAppearanceControls({ form, appearance }: { form: UseFormReturn
       <span className="color-swatch" aria-hidden="true" style={{ backgroundColor: safeColor }} />
     </div>
     {error && <p className="field-error" id="color-error" role="alert">{error.message}</p>}
-    <button type="button" onClick={() => form.setValue('appearance.accentColor', defaultAccentColor, { shouldDirty: true, shouldValidate: true })}>Palauta beige oletusväri</button>
+    <button type="button" onClick={() => form.setValue('appearance.accentColor', defaultAccentColor, { shouldDirty: true, shouldValidate: true })}>Palauta oletusväri</button>
   </fieldset>;
 }

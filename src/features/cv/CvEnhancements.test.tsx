@@ -1,13 +1,12 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import '../../test/pdf-input-probe';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, expect, it, vi } from 'vitest';
 import { App } from '../../App';
 import { selectStep } from '../../test/navigation';
-import { createEmptyCv } from './cv-model';
 import { defaultAccentColor } from './color-utils';
-import { draftStorageKey, saveDraft } from './draft-storage';
+import { draftStorageKey } from './draft-storage';
 import * as imageUtils from './image-utils';
-const photo = 'data:image/jpeg;base64,/9j/AA==';
 afterEach(() => vi.restoreAllMocks());
 
 it('synkronoi värikentät, näyttää virheen ja palauttaa oletusvärin', async () => {
@@ -22,7 +21,7 @@ it('synkronoi värikentät, näyttää virheen ja palauttaa oletusvärin', async
   await user.clear(hex); await user.type(hex, '#GGGGGG');
   expect(hex).toHaveAttribute('aria-invalid', 'true');
   expect(hex).toHaveAccessibleDescription(/Anna väri muodossa #RRGGBB/);
-  await user.click(screen.getByRole('button', { name: 'Palauta beige oletusväri' }));
+  await user.click(screen.getByRole('button', { name: 'Palauta oletusväri' }));
   expect(hex).toHaveValue(defaultAccentColor);
   expect(picker).toHaveValue(defaultAccentColor.toLowerCase());
   expect(hex).toHaveAttribute('aria-invalid', 'false');
@@ -54,22 +53,7 @@ it('autotallentaa istuntoon, palauttaa luonnoksen ja sallii ilmoituksen sulkemis
   expect(screen.queryByRole('status')).not.toBeInTheDocument();
 });
 
-it('vaihtaa pysyvään tallennukseen ja takaisin istuntoon ilman toista luonnosta', async () => {
-  const user = userEvent.setup();
-  render(<App />);
-  await user.type(screen.getByLabelText('Etunimi'), 'Aino');
-  await selectStep(user, 'Viimeistele');
-  const checkbox = screen.getByLabelText('Säilytä luonnos tällä laitteella');
-  await user.click(checkbox);
-  expect(screen.getByText('Älä käytä pysyvää tallennusta yhteiskäyttöisellä tietokoneella.')).toBeVisible();
-  expect(localStorage.getItem(draftStorageKey)).toContain('Aino');
-  expect(sessionStorage.getItem(draftStorageKey)).toBeNull();
-  await user.click(checkbox);
-  expect(localStorage.getItem(draftStorageKey)).toBeNull();
-  expect(sessionStorage.getItem(draftStorageKey)).toContain('Aino');
-  await selectStep(user, 'Perustiedot');
-  expect(screen.getByLabelText('Etunimi')).toHaveValue('Aino');
-});
+
 
 it('kiintiön ylittyminen ei poista kenttien arvoja', async () => {
   vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new DOMException('Quota', 'QuotaExceededError'); });
@@ -80,31 +64,10 @@ it('kiintiön ylittyminen ei poista kenttien arvoja', async () => {
   expect(screen.getByLabelText('Etunimi')).toHaveValue('Aino');
 });
 
-it('peruuttaa ja sulkee tyhjennysdialogin sekä tyhjentää kuvan, värin ja tallennukset vahvistettaessa', async () => {
-  const data = createEmptyCv();
-  data.personalDetails.firstName = 'Aino'; data.appearance.photoDataUrl = photo; data.appearance.accentColor = '#203040';
-  saveDraft(data, true);
-  const user = userEvent.setup();
-  render(<App />);
-  await selectStep(user, 'Viimeistele');
-  const opener = screen.getByRole('button', { name: 'Tyhjennä kaikki tiedot' });
-  await user.click(opener);
-  const dialog = within(screen.getByRole('dialog'));
-  expect(dialog.getByRole('button', { name: 'Peruuta' })).toHaveFocus();
-  await user.tab({ shift: true });
-  expect(dialog.getByRole('button', { name: 'Vahvista tyhjennys' })).toHaveFocus();
-  await user.keyboard('{Escape}');
-  expect(opener).toHaveFocus();
-  expect(localStorage.getItem(draftStorageKey)).toContain('Aino');
-  await user.click(opener); await user.click(screen.getByRole('button', { name: 'Peruuta' }));
-  expect(opener).toHaveFocus();
-  await user.click(opener); await user.click(screen.getByRole('button', { name: 'Vahvista tyhjennys' }));
-  expect(screen.getByRole('button', { name: 'Perustiedot' })).toHaveAttribute('aria-current', 'step');
-  expect(screen.getByLabelText('Etunimi')).toHaveValue('');
-  expect(screen.getByRole('article').querySelector('img')).toBeNull();
-  expect(screen.getByRole('article').style.getPropertyValue('--cv-accent')).toBe(defaultAccentColor);
-  expect(screen.getByRole('status')).toHaveTextContent('Kaikki tiedot tyhjennetty');
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  expect(localStorage.getItem(draftStorageKey)).toBeNull();
-  expect(sessionStorage.getItem(draftStorageKey)).toBeNull();
+it('poistetut osiot eivät näy viimeistelyssä', async () => {
+  const user = userEvent.setup(); render(<App />); await selectStep(user, 'Viimeistele');
+  for (const text of ['Luonnoksen säilyttäminen', 'Säilytä luonnos tällä laitteella', 'Tyhjennä kaikki tiedot', 'Yhteenveto täytetyistä osioista', 'CV:n ATS-tarkistuslista', 'ATS-ystävällinen yksipalstainen rakenne', 'Oma osaaminen, selkeästi esiin.']) expect(screen.queryByText(text)).not.toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Vertaa CV:tä työpaikkailmoitukseen' })).toBeNull();
+  expect(screen.queryByLabelText('Työpaikkailmoitus')).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Analysoi ilmoitus' })).toBeNull();
 });

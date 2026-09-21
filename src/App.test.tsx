@@ -1,3 +1,4 @@
+import './test/pdf-input-probe';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
@@ -16,8 +17,8 @@ describe('CV-rakentaja', () => {
     expect(screen.getByRole('group', { name: 'Perustiedot' })).toBeVisible();
     await selectStep(user, 'Esittely');
     expect(screen.getByRole('group', { name: 'Esittelyteksti' })).toBeVisible();
-    expect(screen.getByRole('heading', { name: 'Esittely', level: 4 })).toBeVisible();
-    expect(screen.getByText('CV-tiedot säilyvät normaalisti tällä laitteella. Vapaaehtoinen tekoälyjalostus lähettää vain valitun tekstin ja mahdollisen tehtävänimikkeen tekoälypalvelulle.')).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'ESITTELY', level: 4 })).toBeNull();
+    expect(screen.getByText('Luo muutamassa minuutissa CV, jonka rekrytointijärjestelmät ja tekoäly pystyvät lukemaan.')).toBeVisible();
   });
 
   it('päivittää kaikki kahdeksan kenttää esikatseluun ilman lähetystä', async () => {
@@ -32,7 +33,8 @@ describe('CV-rakentaja', () => {
     const preview = within(screen.getByRole('article', { name: 'Ansioluettelon esikatselu' }));
     for (const [label, value] of values) {
       if (label === 'Esittely') await selectStep(user, 'Esittely');
-      await user.type(screen.getByRole('textbox', { name: label }), value);
+      await user.click(screen.getByRole('textbox', { name: label }));
+      await user.paste(value);
       if (label === 'Etunimi' || label === 'Sukunimi') {
         expect(preview.getByRole('heading', { name: label === 'Etunimi' ? 'Meri' : 'Meri Virtanen' })).toBeVisible();
       } else {
@@ -42,17 +44,17 @@ describe('CV-rakentaja', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
-  it('pitää esimerkit erillään tyhjistä kentistä ja palauttaa ne tyhjennettäessä', async () => {
+  it('ei lisää esimerkkitietoja tyhjään PDF-syötteeseen', async () => {
     const user = userEvent.setup();
     render(<App />);
     for (const input of screen.getAllByRole('textbox')) expect(input).toHaveValue('');
     const firstName = screen.getByRole('textbox', { name: 'Etunimi' });
-    expect(screen.getByRole('heading', { name: 'Aino Esimerkki' })).toHaveClass('example-text');
+    expect(screen.queryByRole('heading', { name: 'Aino Esimerkki' })).toBeNull();
     await user.type(firstName, 'Meri');
     expect(screen.queryByRole('heading', { name: 'Aino Esimerkki' })).not.toBeInTheDocument();
     await user.clear(firstName);
     expect(firstName).toHaveValue('');
-    expect(screen.getByRole('heading', { name: 'Aino Esimerkki' })).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'Meri' })).toBeNull();
   });
 
   it('kytkee sähköpostin ja LinkedInin virheet kenttiin ja poistaa ne korjattaessa', async () => {
@@ -74,4 +76,25 @@ describe('CV-rakentaja', () => {
     await user.type(linkedIn, 'https://www.linkedin.com/in/meri');
     expect(linkedIn).toHaveAttribute('aria-invalid', 'false');
   });
+});
+
+it('Aloita alusta nollaa CV:n, ulkoasun ja istuntoluonnoksen heti myös Viimeistele-vaiheesta', async () => {
+  const user = userEvent.setup(); render(<App />);
+  await user.type(screen.getByLabelText('Etunimi', { exact: true }), 'Poistettava');
+  await selectStep(user, 'Esittely');
+  await user.type(screen.getByRole('textbox', { name: 'Esittely' }), 'Salainen esittely');
+  await selectStep(user, 'Viimeistele');
+  await user.clear(screen.getByLabelText('HEX-väri'));
+  await user.type(screen.getByLabelText('HEX-väri'), '#203040');
+  await user.click(screen.getByRole('button', { name: 'Aloita alusta' }));
+  expect(screen.getByLabelText('Etunimi', { exact: true })).toHaveValue('');
+  window.dispatchEvent(new Event('pagehide'));
+  const stored = JSON.parse(sessionStorage.getItem('mercuria-cv-draft-v1')!);
+  expect(stored.data.personalDetails.firstName).toBe('');
+  expect(stored.data.summary).toBe('');
+  expect(stored.data.appearance.accentColor).toBe('#E9E1D8');
+  expect(stored.data.appearance.photoDataUrl).toBe('');
+  expect(localStorage.getItem('mercuria-cv-draft-v1')).toBeNull();
+  await selectStep(user, 'Viimeistele');
+  expect(screen.getByLabelText('HEX-väri')).toHaveValue('#E9E1D8');
 });

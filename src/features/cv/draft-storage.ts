@@ -1,10 +1,14 @@
 import { z } from 'zod';
+import { defaultAccentColor, isHexColor } from './color-utils';
 import { createEmptyCv, cvSchema, type CvData } from './cv-model';
+const draftSchemaVersion = 4;
 
 export const draftStorageKey = 'mercuria-cv-draft-v1';
-const legacyCvSchema = cvSchema.extend({ digitalSkills: z.array(z.object({ id: z.string(), name: z.string(), proficiency: z.enum(['', 'Perusteet', 'Hyvä', 'Edistynyt']) })).optional() });
+const storedCvSchema = cvSchema.extend({ appearance: cvSchema.shape.appearance.extend({ accentColor: z.preprocess((value) => typeof value === 'string' && isHexColor(value) ? value : defaultAccentColor, cvSchema.shape.appearance.shape.accentColor) }) });
+const legacyCvSchema = storedCvSchema.extend({ digitalSkills: z.array(z.object({ id: z.string(), name: z.string(), proficiency: z.enum(['', 'Perusteet', 'Hyvä', 'Edistynyt']) })).optional() });
 const envelopeSchema = z.discriminatedUnion('schemaVersion', [
-  z.object({ schemaVersion: z.literal(3), persistent: z.boolean(), data: cvSchema }),
+  z.object({ schemaVersion: z.literal(4), persistent: z.boolean(), data: storedCvSchema }),
+  z.object({ schemaVersion: z.literal(3), persistent: z.boolean(), data: storedCvSchema }),
   z.object({ schemaVersion: z.literal(2), persistent: z.boolean(), data: legacyCvSchema }),
   z.object({ schemaVersion: z.literal(1), persistent: z.boolean(), data: legacyCvSchema }),
 ]);
@@ -26,46 +30,35 @@ export function migrateLegacySkills(data: z.infer<typeof legacyCvSchema>): CvDat
   }
   return { ...current, skills };
 }
-export const storageErrorMessage = 'Luonnoksen tallennus ei onnistunut. Selaimen tallennustila voi olla täynnä tai estetty. Poista kuva tai poista pysyvä tallennus käytöstä. Nykyiset tiedot ovat edelleen lomakkeessa.';
+export const storageErrorMessage = 'Luonnoksen tallennus ei onnistunut. Selaimen tallennustila voi olla täynnä tai estetty. Kokeile poistaa kuva. Nykyiset tiedot ovat edelleen lomakkeessa.';
 
 export function loadDraft(): { data: CvData; persistent: boolean; restored: boolean; error: string } {
   try {
     const local = localStorage.getItem(draftStorageKey);
     const session = sessionStorage.getItem(draftStorageKey);
-    const stored = local ?? session;
+    const stored = session ?? local;
     if (!stored) return { data: createEmptyCv(), persistent: false, restored: false, error: '' };
     const result = envelopeSchema.safeParse(JSON.parse(stored));
-    if (!result.success || (local !== null && !result.data.persistent) || (local === null && result.data.persistent)) {
+    if (!result.success) {
       throw new Error('Invalid draft');
     }
-    if (local !== null) sessionStorage.removeItem(draftStorageKey);
-    return { data: result.data.schemaVersion === 3 ? result.data.data : migrateLegacySkills(result.data.data), persistent: result.data.persistent, restored: true, error: '' };
+
+    const data = result.data.schemaVersion >= 3 ? result.data.data : migrateLegacySkills(result.data.data);
+    // Version 3 did not record whether its temporary default was selected manually.
+    if (result.data.schemaVersion === 3 && data.appearance.accentColor.toUpperCase() === '#EDF3F5') data.appearance.accentColor = defaultAccentColor;
+    return { data, persistent: false, restored: true, error: '' };
   } catch {
     return { data: createEmptyCv(), persistent: false, restored: false, error: 'Luonnosta ei voitu palauttaa. Tallennus on estetty tai luonnos on virheellinen tai vanhentunut. Aloitetaan tyhjästä.' };
   }
 }
 
-export function saveDraft(data: CvData, persistent: boolean): string {
+export function saveDraft(data: CvData): string {
   if (!cvSchema.safeParse(data).success) return '';
   try {
-    const target = persistent ? localStorage : sessionStorage;
-    const other = persistent ? sessionStorage : localStorage;
+    const target = sessionStorage;
     // Keep the previous valid copy if the new storage write exceeds its quota.
-    target.setItem(draftStorageKey, JSON.stringify({ schemaVersion: 3, persistent, data: cvSchema.parse(data) }));
-    other.removeItem(draftStorageKey);
+    target.setItem(draftStorageKey, JSON.stringify({ schemaVersion: draftSchemaVersion, persistent: false, data: cvSchema.parse(data) }));
+    localStorage.removeItem(draftStorageKey);
     return '';
   } catch { return storageErrorMessage; }
-}
-
-export function removeDrafts(): string {
-  let error = '';
-  for (const getStorage of [() => localStorage, () => sessionStorage]) {
-    try { getStorage().removeItem(draftStorageKey); } catch { error = 'Lomake tyhjennettiin, mutta selaimen tallennusta ei voitu poistaa. Tarkista selaimen sivustotiedot ennen laitteen luovuttamista toiselle käyttäjälle.'; }
-  }
-  return error;
-}
-
-export function removePersistentDraft(): string {
-  try { localStorage.removeItem(draftStorageKey); return ''; }
-  catch { return storageErrorMessage; }
 }

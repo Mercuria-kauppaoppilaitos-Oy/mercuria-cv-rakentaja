@@ -1,3 +1,4 @@
+import '../../test/pdf-input-probe';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, expect, it, vi } from 'vitest';
@@ -68,7 +69,7 @@ it('säilyttää validointivirheet vaihdettaessa vaihetta ja näyttää ne yhtee
   expect(await screen.findByRole('alert')).toHaveTextContent('Tarkista sähköpostiosoitteen muoto.');
   await selectStep(user, 'Viimeistele');
   expect(screen.getByRole('alert')).toHaveTextContent('Tarkista sähköpostiosoitteen muoto.');
-  expect(screen.getByText('Täytetty')).toBeVisible();
+  expect(screen.queryByText('Yhteenveto täytetyistä osioista')).not.toBeInTheDocument();
   await selectStep(user, 'Perustiedot');
   expect(screen.getByLabelText('Sähköposti')).toHaveAccessibleDescription('Tarkista sähköpostiosoitteen muoto.');
 });

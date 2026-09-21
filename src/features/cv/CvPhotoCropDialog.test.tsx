@@ -1,3 +1,4 @@
+import '../../test/pdf-input-probe';
 import { useEffect } from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -38,7 +39,7 @@ it('avaa dialogin, tarjoaa vain Zoomauksen ja tallentaa vasta vahvistettaessa se
   expect(screen.getByRole('article').querySelector('img')).toBeNull();
 });
 it.each(['Peruuta', 'Escape'])('säilyttää vanhan kuvan ja palauttaa fokuksen: %s', async (action) => {
-  const data = createEmptyCv(); data.appearance.photoDataUrl = photo; saveDraft(data, false);
+  const data = createEmptyCv(); data.appearance.photoDataUrl = photo; saveDraft(data);
   render(<App />); const user = userEvent.setup();
   await user.upload(screen.getByLabelText('Vaihda kuva'), new File(['new'], 'new.png', { type: 'image/png' }));
   const dialog = await screen.findByRole('dialog');

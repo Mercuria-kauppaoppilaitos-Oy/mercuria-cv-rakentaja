@@ -50,6 +50,6 @@ export function createEmptyCv(): CvData {
   return {
     personalDetails: { firstName: '', lastName: '', professionalTitle: '', email: '', phone: '', city: '', linkedIn: '' },
     summary: '', workExperience: [], education: [], skills: [], languages: [], certifications: [], references: [], referencesDisplay: 'contact',
-    template: 'single-column', appearance: { fontFamily: 'sans-serif', fontSize: 11, lineHeight: 1.6, accentColor: defaultAccentColor, photoDataUrl: '' },
+    template: 'single-column', appearance: { fontFamily: 'sans-serif', fontSize: 11, lineHeight: 1.4, accentColor: defaultAccentColor, photoDataUrl: '' },
   };
 }

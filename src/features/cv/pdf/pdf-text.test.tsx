@@ -5,11 +5,13 @@ import { spawnSync } from 'node:child_process';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { getDocument, OPS, type PDFDocumentProxy } from 'pdfjs-dist/legacy/build/pdf.mjs';
+import { getDocument, OPS } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import type { TextItem } from 'pdfjs-dist/types/src/display/api';
 import { createLongCvFixture, createShortCvFixture } from '../../../test/cv-fixture';
 import { createEmptyCv, type CvData } from '../cv-model';
-import { createCvPdf } from './create-cv-pdf';
+import { createCvPdf, generateCvPdf, renderCvPdf } from './create-cv-pdf';
+import { preparePdfInput } from './pdf-input';
+import { cvDensityLayouts, type CvDensity } from '../cv-layout';
 import { registerPdfFonts } from './pdf-fonts';
 import { migrateLegacySkills } from '../draft-storage';
 
@@ -22,8 +24,10 @@ beforeAll(() => registerPdfFonts({
 }));
 
 type ExtractedPage = { text: string; items: TextItem[]; width: number; height: number };
-async function readPdf(data: CvData, includePhoto = true): Promise<{ bytes: Uint8Array; document: PDFDocumentProxy; pages: ExtractedPage[]; text: string; destroy: () => Promise<void> }> {
-  const blob = await createCvPdf(data, { includePhoto });
+async function readPdf(data: CvData, includePhoto = true, density?: CvDensity) {
+  const input = preparePdfInput(data, includePhoto)!;
+  const result = density ? await renderCvPdf(input, density) : await generateCvPdf(input);
+  const blob = result.blob;
   const bytes = new Uint8Array(await blob.arrayBuffer());
   const task = getDocument({ data: bytes.slice(), useSystemFonts: false, standardFontDataUrl: join(dirname(require.resolve('pdfjs-dist/package.json')), 'standard_fonts').replace(/\\/g, '/') + '/' });
   const document = await task.promise;
@@ -34,7 +38,7 @@ async function readPdf(data: CvData, includePhoto = true): Promise<{ bytes: Uint
     const viewport = page.getViewport({ scale: 1 });
     pages.push({ items, text: items.map((item) => item.str + (item.hasEOL ? '\n' : ' ')).join('').replace(/\s+/g, ' ').trim(), width: viewport.width, height: viewport.height });
   }
-  return { bytes, document, pages, text: pages.map((page) => page.text).join(' '), destroy: () => task.destroy() };
+  return { density: result.density, pageCount: result.pageCount, bytes, document, pages, text: pages.map((page) => page.text).join(' '), destroy: () => task.destroy() };
 }
 
 function expectOrder(text: string, expected: string[]) {
@@ -54,6 +58,7 @@ it('vanhat digitaidot löytyvät vain Osaamisesta ja tehtävärivien väli säil
   const snapshot = JSON.stringify(legacy);
   const result = await readPdf(migrateLegacySkills(legacy));
   try {
+    expect(result.density).toBe('comfortable');
     expect(result.pages).toHaveLength(1);
     expect(result.text).toBe('Olivia Osaaja TYÖKOKEMUS Harjoittelija Esimerkki Oy · 09/2026–11/2026 Tähän tulee tietoa kokemuksesta. Tähän tulee tietoa kokemuksesta. OSAAMINEN Excel – hyvä Procountor – perusteet');
     expect(result.text).not.toContain('kokemuksestaTähän');
@@ -62,8 +67,9 @@ it('vanhat digitaidot löytyvät vain Osaamisesta ja tehtävärivien väli säil
   } finally { await result.destroy(); }
 });
 
-it('lyhyt Olivia-fixture mahtuu yhdelle sivulle kuvalla ja ilman, myös Kielitaito', async () => {
+it.each([1.4, 1.6])('lyhyt Olivia-fixture mahtuu yhdelle sivulle kuvalla ja ilman, myös vanha riviväli %s', async (lineHeight) => {
   const data = createShortCvFixture();
+  data.appearance.lineHeight = lineHeight;
   data.appearance.photoDataUrl = `data:image/jpeg;base64,${(await readFile(new URL('../../../../tests/fixtures/cropped-photo.jpg', import.meta.url))).toString('base64')}`;
   const snapshot = JSON.stringify(data);
   let text = '';
@@ -71,7 +77,9 @@ it('lyhyt Olivia-fixture mahtuu yhdelle sivulle kuvalla ja ilman, myös Kielitai
     const result = await readPdf(data, includePhoto);
     try {
       expect(result.pages).toHaveLength(1);
-      expectOrder(result.text, ['Olivia Osaaja', 'Liiketoiminnan opiskelija', 'olivia@example.com', 'Esittely', 'TYÖKOKEMUS', 'Myymäläharjoittelija', 'Esimerkkikauppa · 09/2026–11/2026', 'Hyllytys. Siisteys. Palvelin asiakkaita kassalla.', 'Kesätyöntekijä', 'Esimerkki Oy · 06/2026–08/2026', 'KOULUTUS', 'Liiketoiminnan perustutkinto', 'Esimerkkioppilaitos · 08/2024–05/2027', 'OSAAMINEN', 'Microsoft 365 – hyvä', 'Procountor – perusteet', 'KIELITAITO', 'Suomi – äidinkieli', 'Englanti – hyvä', 'KORTIT JA PÄTEVYYDET', 'Hygieniapassi – 2026']);
+      expect(result.text).toContain('https://www.linkedin.com/in/oliviaosaaja');
+      expect((await (await result.document.getPage(1)).getAnnotations()).map((item) => item.url)).toContain('https://www.linkedin.com/in/oliviaosaaja');
+      expectOrder(result.text, ['Olivia Osaaja', 'Liiketoiminnan opiskelija', 'olivia@example.com', 'ESITTELY', 'TYÖKOKEMUS', 'Myymäläharjoittelija', 'Esimerkkikauppa · 09/2026–11/2026', 'Hyllytys. Siisteys. Palvelin asiakkaita kassalla.', 'Kesätyöntekijä', 'Esimerkki Oy · 06/2026–08/2026', 'KOULUTUS', 'Liiketoiminnan perustutkinto', 'Esimerkkioppilaitos · 08/2024–05/2027', 'OSAAMINEN', 'Microsoft 365 – hyvä', 'Procountor – perusteet', 'KIELITAITO', 'Suomi – äidinkieli', 'Englanti – hyvä', 'KORTIT JA PÄTEVYYDET', 'Hygieniapassi – 2026']);
       const workText = result.text.slice(result.text.indexOf('TYÖKOKEMUS'), result.text.indexOf('KOULUTUS'));
       expect(workText).not.toContain('•');
       expect(result.text.slice(result.text.indexOf('OSAAMINEN'), result.text.indexOf('KORTIT JA PÄTEVYYDET'))).not.toContain('•');
@@ -104,7 +112,7 @@ it.each([0, 5, 10, 15, 20, 25, 30])('osio-otsikot eivät jää yksin sivun loppu
   data.summary += ' Olen huolellinen ja palveluhenkinen sekä haluan oppia työssä uusia taitoja.'.repeat(extra);
   const result = await readPdf(data);
   try {
-    for (const heading of ['Esittely', 'TYÖKOKEMUS', 'KOULUTUS', 'OSAAMINEN', 'KIELITAITO']) {
+    for (const heading of ['ESITTELY', 'TYÖKOKEMUS', 'KOULUTUS', 'OSAAMINEN', 'KIELITAITO']) {
       const page = result.pages.find((page) => page.text.includes(heading))!;
       expect(page.text.endsWith(heading), heading).toBe(false);
     }
@@ -132,7 +140,7 @@ it('generoi oikean monisivuisen A4-PDF:n ja säilyttää kaiken sisällön ATS-l
     expectOrder(result.text, [
       'Åsa-Maria Ääkkönen-Östergård Pitkänimi', data.personalDetails.professionalTitle,
       'test@example.com', '040 000 0000', 'Vantaa', data.personalDetails.linkedIn,
-      'Esittely', 'Ääkköset: ä ö å Ä Ö Å', 'Esimerkki: Päivi Määttä, Jyväskylä, työpäällikkö',
+      'ESITTELY', 'Ääkköset: ä ö å Ä Ö Å', 'Esimerkki: Päivi Määttä, Jyväskylä, työpäällikkö',
       'TYÖKOKEMUS', ...data.workExperience.map((entry) => entry.title),
       'KOULUTUS', ...data.education.map((entry) => entry.qualification),
       'OSAAMINEN', 'Asiakaspalvelu ja myyntityö',
@@ -162,7 +170,7 @@ it('generoi oikean monisivuisen A4-PDF:n ja säilyttää kaiken sisällön ATS-l
     for (let number = 1; number <= result.document.numPages; number++) urls.push(...(await (await result.document.getPage(number)).getAnnotations()).map((item) => item.url));
     expect(urls).toContain('mailto:test@example.com'); expect(urls).toContain(data.personalDetails.linkedIn); expect(urls).toContain('mailto:reference@example.com');
     // No heading may be the final content on its page, and the name is not repeated.
-    for (const heading of ['Esittely', 'TYÖKOKEMUS', 'KOULUTUS', 'OSAAMINEN', 'KIELITAITO', 'KORTIT JA PÄTEVYYDET', 'SUOSITTELIJAT']) {
+    for (const heading of ['ESITTELY', 'TYÖKOKEMUS', 'KOULUTUS', 'OSAAMINEN', 'KIELITAITO', 'KORTIT JA PÄTEVYYDET', 'SUOSITTELIJAT']) {
       const page = result.pages.find((page) => page.text.includes(heading))!;
       expect(page.text.endsWith(heading), heading + " / " + page.text.slice(-180)).toBe(false);
     }
@@ -222,6 +230,7 @@ it('valokuva ja eri korostusvärit säilyttävät täsmälleen saman poimittavan
   const plain = await readPdf(data);
   try {
     const plainOperators = await (await plain.document.getPage(1)).getOperatorList();
+    expect(plainOperators.argsArray.filter((_, index) => plainOperators.fnArray[index] === OPS.setFillRGBColor).flat()).toContain('#e9e1d8');
     expect(plainOperators.fnArray.some((operation) => [OPS.paintImageXObject, OPS.paintInlineImageXObject].includes(operation))).toBe(false);
     const photo = await readFile(new URL('../../../../tests/fixtures/cropped-photo.jpg', import.meta.url));
     data.appearance.photoDataUrl = `data:image/jpeg;base64,${photo.toString('base64')}`;
@@ -230,6 +239,7 @@ it('valokuva ja eri korostusvärit säilyttävät täsmälleen saman poimittavan
     try {
       expect(withPhoto.text).toBe(plain.text);
       const operators = await (await withPhoto.document.getPage(1)).getOperatorList();
+      expect(operators.argsArray.filter((_, index) => operators.fnArray[index] === OPS.setFillRGBColor).flat()).toContain('#203040');
       expect(operators.fnArray.filter((operation) => [OPS.paintImageXObject, OPS.paintInlineImageXObject].includes(operation))).toHaveLength(1);
       const snapshot = JSON.stringify(data);
       const excluded = await readPdf(data, false);
@@ -261,7 +271,7 @@ it('pitkä kaksiosainen nimi ja ammattinimike kasvattavat ensimmäistä otsakett
   data.appearance.photoDataUrl = `data:image/jpeg;base64,${(await readFile(new URL('../../../../tests/fixtures/cropped-photo.jpg', import.meta.url))).toString('base64')}`;
   const result = await readPdf(data);
   try {
-    expectOrder(result.text, [`${data.personalDetails.firstName} ${data.personalDetails.lastName}`, data.personalDetails.professionalTitle, data.personalDetails.email, 'Esittely', data.summary]);
+    expectOrder(result.text, [`${data.personalDetails.firstName} ${data.personalDetails.lastName}`, data.personalDetails.professionalTitle, data.personalDetails.email, 'ESITTELY', data.summary]);
     expect(result.pages.length).toBe(1);
     const contact = result.pages[0]!.items.find((item) => item.str.includes(data.personalDetails.email))!;
     const headerItems = result.pages[0]!.items.filter((item) => item.str.trim() && item.transform[5] > contact.transform[5]);
@@ -301,3 +311,71 @@ it.skipIf(!hasPoppler)('valinnainen toinen ATS-tekstinpoiminta pdftotext-komenno
     await rm(folder, { recursive: true, force: true });
   }
 }, 30_000);
+
+it.each([['short', false], ['short', true], ['long', false], ['long', true]] as const)('kaikki tiheydet säilyttävät tekstin, sivumäärän ja otsikot: %s photo=%s', async (kind, includePhoto) => {
+  const data = kind === 'short' ? createShortCvFixture() : createLongCvFixture();
+  data.appearance.photoDataUrl = 'data:image/jpeg;base64,' + (await readFile(new URL('../../../../tests/fixtures/cropped-photo.jpg', import.meta.url))).toString('base64');
+  const snapshot = JSON.stringify(data);
+  const counts: number[] = []; let original = '';
+  const densities: CvDensity[] = ['comfortable', 'compact', 'tight'];
+  for (const density of densities) {
+    const result = await readPdf(data, includePhoto, density);
+    try {
+      expect(result.document.numPages).toBe(result.pageCount);
+      counts.push(result.pageCount);
+      if (original) expect(result.text).toBe(original); else original = result.text;
+      const headings = result.pages.flatMap((page) => page.items).filter((item) => ['ESITTELY', 'TYÖKOKEMUS', 'KOULUTUS', 'OSAAMINEN', 'KIELITAITO', 'KORTIT JA PÄTEVYYDET', 'SUOSITTELIJAT'].includes(item.str));
+      expect(headings).toHaveLength(7);
+      expect(new Set(headings.map((item) => item.fontName)).size).toBe(1);
+      expect(new Set(headings.map((item) => item.height)).size).toBe(1);
+      const margin = cvDensityLayouts[density].pageMarginMm * 72 / 25.4;
+      expect(cvDensityLayouts[density].bodyFontSize).toBeGreaterThanOrEqual(11);
+      for (const page of result.pages) {
+        expect(page.text).not.toBe('');
+        for (const item of page.items.filter((item) => item.str.trim())) {
+          expect(item.transform[4]).toBeGreaterThanOrEqual(margin - 1);
+          expect(item.transform[4] + item.width).toBeLessThanOrEqual(page.width - margin + 1);
+          expect(item.transform[5]).toBeGreaterThanOrEqual(margin - 1);
+        }
+        const last = page.items.filter((item) => item.str.trim()).at(-1)!;
+        expect(headings).not.toContain(last);
+      }
+    } finally { await result.destroy(); }
+  }
+  const automatic = await readPdf(data, includePhoto);
+  try {
+    const best = Math.min(...counts);
+    expect(automatic.pageCount).toBe(best);
+    expect(automatic.density).toBe(densities[counts.indexOf(best)]);
+    expect(automatic.text).toBe(original);
+    expect({ counts, density: automatic.density, pages: automatic.pageCount }).toMatchSnapshot();
+  } finally { await automatic.destroy(); }
+  expect(JSON.stringify(data)).toBe(snapshot);
+}, 30000);
+
+it.each([['#E9E1D8', '#000000'], ['#203040', '#ffffff']])('otsake ja Esittely käyttävät samaa taustaa ja kontrastia: %s', async (accent, foreground) => {
+  const data = createEmptyCv(); data.personalDetails.firstName = 'Meri';
+  data.summary = 'Esittelytekstin kontrasti säilyy. https://example.com'; data.appearance.accentColor = accent!;
+  const result = await readPdf(data);
+  try {
+    const operators = await (await result.document.getPage(1)).getOperatorList();
+    const fills = operators.argsArray.filter((_, index) => operators.fnArray[index] === OPS.setFillRGBColor).flat();
+    // Header, section underline and summary rectangle must all use the accent.
+    expect(fills.filter((color) => color === accent!.toLowerCase()).length).toBeGreaterThanOrEqual(3);
+    let fill = ''; const stack: string[] = []; const textColors: { text: string; fill: string }[] = [];
+    operators.fnArray.forEach((operation, index) => {
+      const args = operators.argsArray[index];
+      if (operation === OPS.save) stack.push(fill);
+      if (operation === OPS.restore) fill = stack.pop() ?? '';
+      if (operation === OPS.setFillRGBColor) fill = String(args[0]);
+      if (operation === OPS.showText) {
+        const glyphs = args[0] as { unicode?: string }[];
+        textColors.push({ text: glyphs.map((glyph) => glyph.unicode ?? '').join(''), fill });
+      }
+    });
+    expect(textColors.find((item) => item.text.includes('Meri'))?.fill).toBe(foreground);
+    expect(textColors.find((item) => item.text.includes('Esittelytekstin'))?.fill).toBe(foreground);
+    expect(textColors.find((item) => item.text.includes('https://example.com'))?.fill).toBe(foreground);
+    expect(result.text).toContain('ESITTELY Esittelytekstin kontrasti säilyy. https://example.com');
+  } finally { await result.destroy(); }
+});

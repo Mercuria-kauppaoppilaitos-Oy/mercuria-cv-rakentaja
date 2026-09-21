@@ -14,7 +14,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:production": "node scripts/smoke-production.mjs"
   },
   "dependencies": {
     "@fontsource/lato": "^5.3.0",

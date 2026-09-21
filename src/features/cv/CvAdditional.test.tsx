@@ -1,4 +1,5 @@
-﻿import { fireEvent, render, screen, within } from '@testing-library/react';
+import '../../test/pdf-input-probe';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { App } from '../../App';
@@ -140,6 +141,8 @@ describe('Uudet CV-osiot', () => {
   it('näyttää kaikki CV-osiot pyydetyssä järjestyksessä', async () => {
     const user = userEvent.setup();
     render(<App />);
+    await selectStep(user, 'Esittely');
+    await user.type(screen.getByRole('textbox', { name: 'Esittely' }), 'Oma esittely');
     await addEntry(user, 'Lisää työkokemus');
     await user.type(entry('Työkokemus').getByLabelText('Tehtävänimike tai kokemuksen tyyppi'), 'Myyjä');
     await addEntry(user, 'Lisää koulutus');
@@ -149,7 +152,7 @@ describe('Uudet CV-osiot', () => {
       await user.type(entry(section.entry).getByLabelText(section.field), section.value);
     }
     expect(preview().getAllByRole('heading', { level: 4 }).map((heading) => heading.textContent)).toEqual([
-      'Esittely', 'TYÖKOKEMUS', 'KOULUTUS', 'OSAAMINEN', 'KIELITAITO', 'KORTIT JA PÄTEVYYDET', 'SUOSITTELIJAT',
+      'ESITTELY', 'TYÖKOKEMUS', 'KOULUTUS', 'OSAAMINEN', 'KIELITAITO', 'KORTIT JA PÄTEVYYDET', 'SUOSITTELIJAT',
     ]);
   });
 });

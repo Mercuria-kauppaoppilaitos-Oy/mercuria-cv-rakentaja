@@ -1,4 +1,5 @@
-﻿import { fireEvent, render, screen, within } from '@testing-library/react';
+import '../../test/pdf-input-probe';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { App } from '../../App';
@@ -14,7 +15,8 @@ function education(index = 1) {
   return within(screen.getByRole('group', { name: `Koulutus ${index}` }));
 }
 function setMonth(input: HTMLElement, value: string) {
-  fireEvent.change(input, { target: { value } });
+  fireEvent.change(input, { target: { value: value.slice(5) } });
+  fireEvent.change(document.getElementById(input.id + '-year')!, { target: { value: value.slice(0, 4) } });
 }
 
 describe('Työkokemus ja koulutus', () => {
@@ -128,7 +130,7 @@ describe('Työkokemus ja koulutus', () => {
     expect(preview().queryByText(/05\/2027/)).not.toBeInTheDocument();
     await addEntry(user, 'Lisää työkokemus');
     await user.type(work().getByLabelText('Tehtävänimike tai kokemuksen tyyppi'), 'TET');
-    expect(preview().getAllByRole('heading').map((heading) => heading.textContent)).toEqual(['Aino Esimerkki', 'Esittely', 'TYÖKOKEMUS', 'TET', 'KOULUTUS']);
+    expect(preview().getAllByRole('heading').map((heading) => heading.textContent)).toEqual(['', 'TYÖKOKEMUS', 'TET', 'KOULUTUS']);
     await selectStep(user, 'Koulutus');
     await user.click(education().getByRole('checkbox', { name: 'Opinnot jatkuvat' }));
     expect(preview().getByText('08/2024–05/2027')).toBeVisible();

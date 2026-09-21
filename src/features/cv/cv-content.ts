@@ -74,7 +74,7 @@ export function getAdditionalSections(data: CvData): CvSection[] {
 /** The canonical document order. Preview-only examples are never included. */
 export function getCvSections(data: CvData): CvSection[] {
   const sections: CvSection[] = [];
-  if (data.summary.trim()) sections.push({ kind: 'summary', heading: 'Esittely', id: 'cv-summary-title', text: data.summary.trim() });
+  if (data.summary.trim()) sections.push({ kind: 'summary', heading: 'ESITTELY', id: 'cv-summary-title', text: data.summary.trim() });
   for (const [source, heading, id] of [
     [data.workExperience, 'TYÖKOKEMUS', 'cv-work-title'],
     [data.education, 'KOULUTUS', 'cv-education-title'],

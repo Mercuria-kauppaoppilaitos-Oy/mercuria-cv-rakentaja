@@ -1,6 +1,5 @@
-import { useState } from 'react';
+import type { PdfPhotoControl } from './pdf/pdf-options';
 import type { UseFormReturn } from 'react-hook-form';
-import { CvAtsReview } from './ats/CvAtsReview';
 import { CvTextRewrite } from './ai/CvTextRewrite';
 import type { CvData } from './cv-model';
 import { CvHistoryFields } from './CvHistoryFields';
@@ -9,7 +8,6 @@ import { CvFinish } from './CvFinish';
 import { cvSteps } from './cv-steps';
 import { CvAppearanceControls } from './CvAppearanceControls';
 import { CvPhotoUpload } from './CvPhotoUpload';
-import { CvDraftControls, type DraftControls } from './CvDraftControls';
 
 type PersonalField = keyof CvData['personalDetails'];
 const fields: { name: PersonalField; label: string; placeholder: string; type?: 'email' | 'tel' | 'url'; autoComplete?: string }[] = [
@@ -21,15 +19,13 @@ const fields: { name: PersonalField; label: string; placeholder: string; type?: 
   { name: 'city', label: 'Paikkakunta', placeholder: 'Vantaa', autoComplete: 'address-level2' },
   { name: 'linkedIn', label: 'LinkedIn', placeholder: 'https://www.linkedin.com/in/aino-esimerkki', type: 'url' },
 ];
-export function CvForm({ form, data, activeStep, onSelect, draftControls }: { form: UseFormReturn<CvData>; data: CvData; activeStep: number; onSelect: (step: number) => void; draftControls: DraftControls }) {
+export function CvForm({ form, data, activeStep, onSelect, pdfPhoto }: { form: UseFormReturn<CvData>; data: CvData; activeStep: number; onSelect: (step: number) => void; pdfPhoto?: PdfPhotoControl }) {
   const { register, formState: { errors } } = form;
-  const [editHint, setEditHint] = useState<{ step: number; text: string } | null>(null);
   return (
     <section className="editor panel" aria-labelledby="editor-title">
       <div className="panel-heading"><p className="eyebrow">OMA CV:SI</p><h2 id="editor-title">Muokkaa tietojasi</h2><p>Kaikki kentät ovat vapaaehtoisia. Esikatselu päivittyy kirjoittaessasi.</p></div>
       <h3 className="active-step-heading" tabIndex={-1} id="active-step-heading">{cvSteps[activeStep]}</h3>
       <form noValidate onSubmit={(event) => event.preventDefault()}>
-        {editHint?.step === activeStep && <div className="field-help" role="status"><p>{editHint.text}</p><button type="button" onClick={() => setEditHint(null)}>Sulje muokkausvihje</button></div>}
         {activeStep === 0 && <fieldset><legend>Perustiedot</legend><div className="field-grid">
           {fields.map((field) => {
             const error = errors.personalDetails?.[field.name];
@@ -59,9 +55,7 @@ export function CvForm({ form, data, activeStep, onSelect, draftControls }: { fo
         </>}
         {activeStep === 6 && <>
           <CvAppearanceControls form={form} appearance={data.appearance} />
-          <CvDraftControls {...draftControls} />
-          <CvFinish data={data} />
-          <CvAtsReview data={data} form={form} onEdit={(step, text) => { setEditHint({ step, text }); onSelect(step); }} />
+          <CvFinish data={data} pdfPhoto={pdfPhoto} />
         </>}
         <div className="step-actions">
           <button type="button" disabled={activeStep === 0} onClick={() => onSelect(activeStep - 1)}>Edellinen</button>

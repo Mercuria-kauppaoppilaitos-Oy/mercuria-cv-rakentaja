@@ -1,3 +1,4 @@
+import { MonthPicker } from './MonthPicker';
 import { useRef } from 'react';
 import { useFieldArray, useWatch, type FieldPath, type UseFormReturn } from 'react-hook-form';
 import { createEmptyEducation, createEmptyWorkExperience, type CvData } from './cv-model';
@@ -64,14 +65,8 @@ export function CvHistoryFields({ form, name }: { form: UseFormReturn<CvData>; n
                 <label htmlFor={`${prefix}-location`}>Paikkakunta (valinnainen)</label>
                 <input id={`${prefix}-location`} {...form.register(`${name}.${index}.location`)} />
               </div>
-              <div className="field">
-                <label htmlFor={`${prefix}-start`}>Aloituskuukausi</label>
-                <input id={`${prefix}-start`} type="month" {...form.register(`${name}.${index}.startDate`)} />
-              </div>
-              <div className="field">
-                <label htmlFor={`${prefix}-end`}>{config.endLabel}</label>
-                <input id={`${prefix}-end`} type="month" disabled={name === 'workExperience' && entry?.isCurrent} {...form.register(`${name}.${index}.endDate`)} />
-              </div>
+              <MonthPicker id={`${prefix}-start`} label="Aloituskuukausi" value={entry?.startDate ?? ''} onChange={(value) => form.setValue(`${name}.${index}.startDate`, value, { shouldDirty: true })} />
+              <MonthPicker id={`${prefix}-end`} label={config.endLabel} value={entry?.endDate ?? ''} disabled={entry?.isCurrent} onChange={(value) => form.setValue(`${name}.${index}.endDate`, value, { shouldDirty: true })} />
               <div className="field field-wide checkbox-field">
                 <input id={`${prefix}-current`} type="checkbox" {...form.register(`${name}.${index}.isCurrent`)} />
                 <label htmlFor={`${prefix}-current`}>{config.currentLabel}</label>

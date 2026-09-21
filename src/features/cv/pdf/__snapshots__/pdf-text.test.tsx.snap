@@ -1,0 +1,49 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`kaikki tiheydet säilyttävät tekstin, sivumäärän ja otsikot: long photo=false 1`] = `
+{
+  "counts": [
+    3,
+    2,
+    2,
+  ],
+  "density": "compact",
+  "pages": 2,
+}
+`;
+
+exports[`kaikki tiheydet säilyttävät tekstin, sivumäärän ja otsikot: long photo=true 1`] = `
+{
+  "counts": [
+    3,
+    2,
+    2,
+  ],
+  "density": "compact",
+  "pages": 2,
+}
+`;
+
+exports[`kaikki tiheydet säilyttävät tekstin, sivumäärän ja otsikot: short photo=false 1`] = `
+{
+  "counts": [
+    2,
+    1,
+    1,
+  ],
+  "density": "compact",
+  "pages": 1,
+}
+`;
+
+exports[`kaikki tiheydet säilyttävät tekstin, sivumäärän ja otsikot: short photo=true 1`] = `
+{
+  "counts": [
+    2,
+    1,
+    1,
+  ],
+  "density": "compact",
+  "pages": 1,
+}
+`;

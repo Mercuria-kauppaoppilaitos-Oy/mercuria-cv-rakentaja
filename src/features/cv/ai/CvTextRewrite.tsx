@@ -71,9 +71,8 @@ export function CvTextRewrite(props: Props) {
     close();
   }
   return <div className="text-rewrite">
-    <p id={`${id}-privacy`} className="field-help">Tekoälytoimintoa käytettäessä vain tämän kentän teksti ja mahdollinen tehtävänimike lähetetään käsiteltäväksi. Tarkista ehdotus ennen sen käyttämistä.</p>
     {(short || long) && <p id={`${id}-help`} className="field-help">{short ? rewriteMessages.short : rewriteMessages.long}</p>}
-    <button ref={opener} type="button" disabled={short || long || busy || Boolean(proposal)} aria-describedby={`${id}-privacy${short || long ? ` ${id}-help` : ''}`} onClick={() => void start()}>{busy ? 'Jalostetaan…' : 'Jalosta tekoälyllä'}</button>
+    <button ref={opener} type="button" disabled={short || long || busy || Boolean(proposal)} aria-describedby={short || long ? `${id}-help` : undefined} onClick={() => void start()}>{busy ? 'Jalostetaan…' : 'Jalosta tekoälyllä'}</button>
     <p className="field-error rewrite-error" aria-live="polite" aria-atomic="true">{error}</p>
     {proposal && <section className="rewrite-proposal" aria-labelledby={`${id}-heading`} onKeyDown={(event) => {
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); }
