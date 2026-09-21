@@ -22,7 +22,6 @@ function createStyles(contentLayout: CvDensityLayout) { return StyleSheet.create
   summary: { paddingVertical: mm(contentLayout.summaryPaddingMm), paddingHorizontal: mm(5) },
   entry: { marginBottom: mm(contentLayout.entryGapMm) },
   entryTitle: { lineHeight: 1.3, fontSize: 12, fontWeight: 700 },
-  bullet: { paddingLeft: 12, marginTop: 2 },
   compactLine: { marginTop: 2 },
   metadata: { lineHeight: 1.4, fontSize: 10.5, color: '#6F6963', marginTop: mm(contentLayout.metadataGapMm) },
   paragraph: { marginTop: mm(contentLayout.descriptionGapMm) },
@@ -49,7 +48,6 @@ function Entry({ entry, lineHeight, last, contentLayout, styles }: { entry: Cont
 }
 
 function Section({ section, accent, accentText, lineHeight, contentLayout, styles }: { section: CvSection; accent: string; accentText: string; lineHeight: number; contentLayout: CvDensityLayout; styles: PdfStyles }) {
-  const listStyle = section.id === 'cv-skills-title' || section.id === 'cv-languages-title' ? styles.compactLine : styles.bullet;
   // Reserve only the minimum start of the next text block, not four lines of
   // additional content. Keep headings and content in the same page flow.
   const presence = lineHeight * 2 + mm(contentLayout.metadataGapMm);
@@ -63,7 +61,7 @@ function Section({ section, accent, accentText, lineHeight, contentLayout, style
     {heading}
     {section.kind === 'summary' && <Text style={[styles.summary, { backgroundColor: accent, color: accentText }]} orphans={2} widows={2}><LinkedText text={section.text} color={accentText} /></Text>}
     {section.kind === 'notice' && <Text orphans={2} widows={2}>{section.text}</Text>}
-    {section.kind === 'list' && section.items.map((item, index) => <Text key={item.id} style={[listStyle, { marginTop: index === 0 ? 0 : 2 }]} orphans={1} widows={2}>{listStyle === styles.bullet ? '• ' : ''}<LinkedText text={item.text} /></Text>)}
+    {section.kind === 'list' && section.items.map((item, index) => <Text key={item.id} style={[styles.compactLine, { marginTop: index === 0 ? 0 : 2 }]} orphans={1} widows={2}><LinkedText text={item.text} /></Text>)}
     {section.kind === 'entries' && section.entries.map((entry, index) => <Entry key={entry.id} entry={entry} lineHeight={lineHeight} last={index === section.entries.length - 1} contentLayout={contentLayout} styles={styles} />)}
   </>;
 }

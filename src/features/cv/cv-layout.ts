@@ -8,7 +8,7 @@ export const cvHeaderLayout = {
 };
 
 export type CvDensity = 'comfortable' | 'compact' | 'tight';
-export const pdfLayoutVersion = 4;
+export const pdfLayoutVersion = 5;
 export interface CvDensityLayout {
   pageMarginMm: number;
   headerPaddingMm: number;

@@ -409,7 +409,7 @@ it.each(['comfortable', 'compact', 'tight', 'long'] as const)('kaikki näkyvät 
   const expected = [getFullName(data.personalDetails), data.personalDetails.professionalTitle,
     [data.personalDetails.email, data.personalDetails.phone, data.personalDetails.city, data.personalDetails.linkedIn].filter(Boolean).join(' · '),
     ...getCvSections(data).flatMap((section) => [section.heading, ...(section.kind === 'entries' ? section.entries.flatMap((entry) => [entry.title, ...entry.lines, entry.paragraph])
-      : section.kind === 'list' ? section.items.map((item) => (section.id === 'cv-certifications-title' ? '• ' : '') + item.text) : [section.text])]),
+      : section.kind === 'list' ? section.items.map((item) => item.text) : [section.text])]),
   ].join(' ').replace(/\s+/g, ' ').trim();
   const result = await readPdf(data, true, density === 'long' ? undefined : density);
   try {
@@ -433,3 +433,18 @@ it.each(['comfortable', 'compact', 'tight', 'long'] as const)('kaikki näkyvät 
     }
   } finally { await result.destroy(); }
 }, 30000);
+
+it.each(['comfortable', 'compact', 'tight'] as const)('pätevyydet ovat erillisiä tekstirivejä kielten vasemmassa linjassa: %s', async (density) => {
+  const data = createShortCvFixture();
+  data.certifications.push({ id: 'second-certificate', name: 'Ensiapukoulutus', issuer: '', issuedDate: '2025', expiryDate: '' });
+  const result = await readPdf(data, false, density);
+  try {
+    const items = result.pages.flatMap((page) => page.items);
+    const language = items.find((item) => item.str === 'Suomi – äidinkieli')!;
+    const rows = ['Hygieniapassi – 2026', 'Ensiapukoulutus – 2025'].map((text) => items.find((item) => item.str === text)!);
+    for (const row of rows) { expect(row).toBeDefined(); expect(row.transform[4]).toBeCloseTo(language.transform[4], 5); }
+    expect(rows[0]!.transform[5]).toBeGreaterThan(rows[1]!.transform[5]);
+    const section = result.text.slice(result.text.indexOf('KORTIT JA PÄTEVYYDET'), result.text.indexOf('SUOSITTELIJAT'));
+    expect(section.trim()).toBe('KORTIT JA PÄTEVYYDET Hygieniapassi – 2026 Ensiapukoulutus – 2025');
+  } finally { await result.destroy(); }
+});

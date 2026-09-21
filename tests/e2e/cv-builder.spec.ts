@@ -554,3 +554,15 @@ test('Harjoittelija ja suosittelijan koko nimi säilyvät toistuvissa PDF-päivi
   const download = page.waitForEvent('download'); await page.getByRole('button', { name: 'Lataa CV PDF-muodossa' }).click();
   expect(Array.from(await readFile((await (await download).path())!))).toEqual(bytes);
 });
+
+test('pätevyydet ilman luettelomerkkejä samassa esikatselun ja latauksen PDF:ssä', async ({ page }) => {
+  const data = createShortCvFixture();
+  data.certifications.push({ id: 'second-certificate', name: 'Ensiapukoulutus', issuer: '', issuedDate: '2025', expiryDate: '' });
+  await page.addInitScript(({ key, data }) => { if (window === window.top) sessionStorage.setItem(key, JSON.stringify({ schemaVersion: 4, persistent: false, data })); }, { key, data });
+  await page.goto('/'); await step(page, 'Viimeistele');
+  const text = await previewText(page);
+  expect(text.slice(text.indexOf('KORTIT JA PÄTEVYYDET'), text.indexOf('SUOSITTELIJAT')).trim()).toBe('KORTIT JA PÄTEVYYDET Hygieniapassi – 2026 Ensiapukoulutus – 2025');
+  const bytes = await previewBytes(page);
+  const download = page.waitForEvent('download'); await page.getByRole('button', { name: 'Lataa CV PDF-muodossa' }).click();
+  expect(Array.from(await readFile((await (await download).path())!))).toEqual(bytes);
+});
