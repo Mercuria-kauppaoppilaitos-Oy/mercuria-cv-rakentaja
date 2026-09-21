@@ -13,7 +13,7 @@ type PersonalField = keyof CvData['personalDetails'];
 const fields: { name: PersonalField; label: string; placeholder: string; type?: 'email' | 'tel' | 'url'; autoComplete?: string }[] = [
   { name: 'firstName', label: 'Etunimi', placeholder: 'Aino', autoComplete: 'given-name' },
   { name: 'lastName', label: 'Sukunimi', placeholder: 'Esimerkki', autoComplete: 'family-name' },
-  { name: 'professionalTitle', label: 'Ammatillinen otsikko', placeholder: 'Asiakaspalvelun ammattilainen', autoComplete: 'organization-title' },
+  { name: 'professionalTitle', label: 'Osaamistasi kuvaava otsikko', placeholder: 'Asiakaspalvelun ammattilainen', autoComplete: 'organization-title' },
   { name: 'email', label: 'Sähköposti', placeholder: 'aino.esimerkki@example.com', type: 'email', autoComplete: 'email' },
   { name: 'phone', label: 'Puhelinnumero', placeholder: '040 123 4567', type: 'tel', autoComplete: 'tel' },
   { name: 'city', label: 'Paikkakunta', placeholder: 'Vantaa', autoComplete: 'address-level2' },
@@ -64,7 +64,7 @@ export function CvForm({ form, data, activeStep, onSelect, pdfPhoto }: { form: U
         </div>
         {activeStep === 6 && <details className="privacy-details"><summary>Tietosuoja ja luonnoksen säilyminen</summary>
           <p>CV-luonnos ja valokuva käsitellään selaimessa. PDF muodostetaan selaimessa. Luonnos tallentuu tämän välilehden istuntotallennukseen ja palautuu sivun päivityksessä. Selaimen istunnon palautus voi palauttaa myös luonnoksen. Yhteiskäyttöisellä laitteella poista tarvittaessa sivuston tiedot selaimen asetuksista.</p>
-          <p>AI toimii vain painalluksestasi. Esittelyn ja työkokemuksen parantamiseen lähetetään valitun kentän teksti ja mahdollinen tehtävänimike palvelinrajapinnan kautta OpenAI-palveluun. Osaamisehdotuksiin lähetetään ammatillinen otsikko, esittely sekä työtehtävien ja koulutusten nimet ja kuvaukset. Nimi-, yhteystieto-, valokuva-, työnantaja-, oppilaitos- ja suosittelijakenttiä ei lähetetä osaamisehdotuksia varten. Jos kirjoitat henkilötietoja ammatilliseen vapaatekstiin, myös ne sisältyvät lähetykseen.</p>
+          <p>AI toimii vain painalluksestasi. Esittelyn ja työkokemuksen parantamiseen lähetetään valitun kentän teksti ja mahdollinen tehtävänimike palvelinrajapinnan kautta OpenAI-palveluun. Osaamisehdotuksiin lähetetään osaamista kuvaava otsikko, esittely sekä työtehtävien ja koulutusten nimet ja kuvaukset. Nimi-, yhteystieto-, valokuva-, työnantaja-, oppilaitos- ja suosittelijakenttiä ei lähetetä osaamisehdotuksia varten. Jos kirjoitat henkilötietoja ammatilliseen vapaatekstiin, myös ne sisältyvät lähetykseen.</p>
           <p>Ehdotuksia ei lisätä CV:hen ilman valintaasi. Osaamisehdotukset ja lähdetietojen tarkiste säilyvät istuntotallennuksessa; erillistä kopiota lähdetekstistä ei tallenneta. Aloita alusta tyhjentää myös ehdotukset. Tallennus voi estyä selaimen asetusten vuoksi. Työpaikkailmoituksia ei käsitellä. Sovellus ei lokita AI-tekstejä; palveluntarjoajan tietojen käsittelyyn sovelletaan sen ehtoja.</p>
         </details>}
       </form>

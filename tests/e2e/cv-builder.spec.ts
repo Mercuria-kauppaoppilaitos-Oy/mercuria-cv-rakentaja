@@ -102,7 +102,7 @@ test('luonnos, väri ja käsitelty kuva palautuvat istunnossa', async ({ page })
   await page.goto('/');
   await page.getByLabel('Etunimi', { exact: true }).fill('Aino');
   await page.getByLabel('Sukunimi', { exact: true }).fill('Åström');
-  await page.getByLabel('Ammatillinen otsikko').fill('Myyjä');
+  await page.getByLabel('Osaamistasi kuvaava otsikko').fill('Myyjä');
   await page.getByLabel('Lisää valokuva').setInputFiles(photoPath);
   await expect(page.getByRole('dialog', { name: 'Rajaa valokuva' })).toBeVisible();
   await page.getByRole('button', { name: 'Käytä kuvaa' }).click();
@@ -232,7 +232,7 @@ test('lataa selaimessa tekstipohjaisen ATS-luettavan PDF:n paikallisesti ja vast
   await page.goto('/');
   await page.getByLabel('Etunimi', { exact: true }).fill('Päivi');
   await page.getByLabel('Sukunimi', { exact: true }).fill('Määttä');
-  await page.getByLabel('Ammatillinen otsikko').fill('Työpäällikkö');
+  await page.getByLabel('Osaamistasi kuvaava otsikko').fill('Työpäällikkö');
   await page.getByLabel('Sähköposti').fill('paivi@example.com');
   await page.getByLabel('Paikkakunta').fill('Jyväskylä');
   await page.getByLabel('LinkedIn').fill('https://www.linkedin.com/in/pdf-fixture');
@@ -329,7 +329,7 @@ test('pitkät nimet ja otsikot säilyvät mobiilin PDF:ssä', async ({ page }) =
   await step(page, 'Perustiedot');
   await page.getByLabel('Etunimi', { exact: true }).fill('Åsa-Maria Päivi');
   await page.getByLabel('Sukunimi', { exact: true }).fill('Ääkkönen-Östergård Pitkänimi Esimerkkisukunimi');
-  await page.getByLabel('Ammatillinen otsikko').fill('Asiakaspalvelun ja verkkokaupan kehittämisen sekä kansainvälisen yhteistyön kokenut ammattilainen');
+  await page.getByLabel('Osaamistasi kuvaava otsikko').fill('Asiakaspalvelun ja verkkokaupan kehittämisen sekä kansainvälisen yhteistyön kokenut ammattilainen');
   await page.setViewportSize({ width: 320, height: 700 });
   await page.getByRole('button', { name: 'Esikatselu', exact: true }).click();
   expect(await previewText(page)).toContain('Åsa-Maria Päivi');

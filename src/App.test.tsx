@@ -11,7 +11,7 @@ describe('CV-rakentaja', () => {
     render(<App />);
     expect(screen.getByRole('img', { name: 'Mercuria' })).toBeVisible();
     expect(screen.getByText('CV-rakentaja')).toBeVisible();
-    expect(screen.getByRole('heading', { name: 'Hyvä CV alkaa sinusta.' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Tee osaamisesi näkyväksi.' })).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Muokkaa tietojasi' })).toBeVisible();
     expect(screen.getByRole('heading', { name: 'CV-esikatselu' })).toBeVisible();
     expect(screen.getByRole('group', { name: 'Perustiedot' })).toBeVisible();
@@ -25,7 +25,7 @@ describe('CV-rakentaja', () => {
     const user = userEvent.setup();
     render(<App />);
     const values = [
-      ['Etunimi', 'Meri'], ['Sukunimi', 'Virtanen'], ['Ammatillinen otsikko', 'Myyntineuvoja'],
+      ['Etunimi', 'Meri'], ['Sukunimi', 'Virtanen'], ['Osaamistasi kuvaava otsikko', 'Myyntineuvoja'],
       ['Sähköposti', 'meri@example.com'], ['Puhelinnumero', '+358 40 987 6543'],
       ['Paikkakunta', 'Helsinki'], ['LinkedIn', 'https://www.linkedin.com/in/meri-virtanen'],
       ['Esittely', 'Autan asiakkaita löytämään sopivat ratkaisut.\nOpin mielelläni uutta.'],

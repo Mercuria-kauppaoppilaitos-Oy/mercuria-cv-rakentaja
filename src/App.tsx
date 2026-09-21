@@ -64,7 +64,7 @@ export function App() {
           <button type="button" aria-pressed={mobileView === 'preview'} aria-controls="preview-panel" onClick={() => setMobileView('preview')}>Esikatselu</button>
         </div>
         <div id="form-panel" className="form-column" hidden={mobile && mobileView !== 'form'}>
-          <div className="intro"><p className="eyebrow">SEURAAVA ASKEL URALLASI</p><h1>Hyvä CV alkaa sinusta.</h1></div>
+          <div className="intro"><p className="eyebrow">SEURAAVA ASKEL URALLASI</p><h1>Tee osaamisesi näkyväksi.</h1></div>
           {draft.notice && <div className="draft-notice"><p role="status">{draft.notice}</p><button type="button" aria-label="Sulje luonnosilmoitus" onClick={draft.dismissNotice}>Sulje</button></div>}
           {draft.error && <p role="alert" className="field-error">{draft.error}</p>}
           {compact && !mobile && <button className="preview-toggle" type="button" aria-expanded={showPreview} aria-controls="preview-panel" onClick={() => setShowPreview(!showPreview)}>{showPreview ? 'Piilota esikatselu' : 'Näytä esikatselu'}</button>}
