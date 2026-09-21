@@ -62,6 +62,11 @@ export function CvForm({ form, data, activeStep, onSelect, pdfPhoto }: { form: U
           <span>{activeStep + 1} / {cvSteps.length}</span>
           <button className="add-button" type="button" disabled={activeStep === cvSteps.length - 1} onClick={() => onSelect(activeStep + 1)}>Seuraava</button>
         </div>
+        {activeStep === 6 && <details className="privacy-details"><summary>Tietosuoja ja luonnoksen säilyminen</summary>
+          <p>CV-luonnos ja valokuva käsitellään selaimessa. PDF muodostetaan selaimessa. Luonnos tallentuu tämän välilehden istuntotallennukseen ja palautuu sivun päivityksessä. Selaimen istunnon palautus voi palauttaa myös luonnoksen. Yhteiskäyttöisellä laitteella poista tarvittaessa sivuston tiedot selaimen asetuksista.</p>
+          <p>AI toimii vain painalluksestasi. Esittelyn ja työkokemuksen parantamiseen lähetetään valitun kentän teksti ja mahdollinen tehtävänimike palvelinrajapinnan kautta OpenAI-palveluun. Osaamisehdotuksiin lähetetään ammatillinen otsikko, esittely sekä työtehtävien ja koulutusten nimet ja kuvaukset. Nimi-, yhteystieto-, valokuva-, työnantaja-, oppilaitos- ja suosittelijakenttiä ei lähetetä osaamisehdotuksia varten. Jos kirjoitat henkilötietoja ammatilliseen vapaatekstiin, myös ne sisältyvät lähetykseen.</p>
+          <p>Ehdotuksia ei lisätä CV:hen ilman valintaasi. Osaamisehdotukset ja lähdetietojen tarkiste säilyvät istuntotallennuksessa; erillistä kopiota lähdetekstistä ei tallenneta. Aloita alusta tyhjentää myös ehdotukset. Tallennus voi estyä selaimen asetusten vuoksi. Työpaikkailmoituksia ei käsitellä. Sovellus ei lokita AI-tekstejä; palveluntarjoajan tietojen käsittelyyn sovelletaan sen ehtoja.</p>
+        </details>}
       </form>
     </section>
   );

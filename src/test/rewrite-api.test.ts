@@ -135,3 +135,42 @@ describe('AI rewrite API (mock SDK, no network)', () => {
     expect(log).not.toHaveBeenCalled();
   });
 });
+
+const skillSource = { professionalTitle: 'Myyjä', summary: '', workExperience: [{ title: 'Harjoittelija', description: 'Palvelin asiakkaita ja hyllytin tuotteita.' }], education: [] };
+const skillsPayload = { operation: 'suggest-skills', source: skillSource };
+describe('Skill suggestions on the same protected API', () => {
+  it('uses one structured call, only allowlisted professional context and the existing model', async () => {
+    parse.mockResolvedValue({ status: 'completed', output_parsed: { skills: ['Asiakaspalvelu', 'Hyllytys', ' ASIAKASPALVELU '] } });
+    const response = await handleRewriteRequest(request(skillsPayload));
+    expect(response.status).toBe(200); expect(await response.json()).toEqual({ skills: ['Asiakaspalvelu', 'Hyllytys'] });
+    expect(parse).toHaveBeenCalledTimes(1);
+    const options = parse.mock.calls[0]![0]; expect(JSON.parse(options.input[0].content)).toEqual(skillSource);
+    expect(options.text.format.name).toBe('cv_skills'); expect(options.instructions).toContain('Älä keksi');
+    expect(options.model).toBe('gpt-5.6-luna'); expect(options.store).toBe(false);
+  });
+  it.each([
+    { ...skillsPayload, name: 'Private' }, { ...skillsPayload, operation: 'unknown' },
+    { ...skillsPayload, source: { ...skillSource, email: 'private@example.com' } },
+    { ...skillsPayload, source: { ...skillSource, summary: 'x'.repeat(1501) } },
+    { ...skillsPayload, source: { ...skillSource, workExperience: Array(11).fill(skillSource.workExperience[0]) } },
+    { ...skillsPayload, source: { ...skillSource, workExperience: [{ ...skillSource.workExperience[0], employer: 'Secret' }] } },
+    { ...skillsPayload, source: { ...skillSource, workExperience: [], education: [] } },
+  ])('rejects invalid skills input before SDK invocation: %j', async (body) => {
+    expect((await handleRewriteRequest(request(body))).status).toBe(400); expect(parse).not.toHaveBeenCalled();
+  });
+  it.each([{}, { skills: [] }, { skills: [''] }, { skills: ['x'.repeat(81)] }, { skills: Array(11).fill('Asiakaspalvelu') },
+    { skills: ['<b>Asiakaspalvelu</b>'] }, { skills: ['Opiskelija'] }, { skills: ['Hyvä taito'], raw: 'secret' }, { skills: ['- Asiakaspalvelu'] }])('rejects unsafe skill output: %j', async (output_parsed) => {
+    parse.mockResolvedValue({ status: 'completed', output_parsed });
+    const response = await handleRewriteRequest(request(skillsPayload)); expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({ error: rewriteMessages.failure });
+  });
+  it('handles missing key, rate limit and timeout safely for suggestions', async () => {
+    vi.stubEnv('OPENAI_API_KEY', ''); vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    expect((await handleRewriteRequest(request(skillsPayload))).status).toBe(503); expect(parse).not.toHaveBeenCalled();
+    vi.stubEnv('OPENAI_API_KEY', 'test-placeholder');
+    parse.mockRejectedValue(new OpenAI.APIError(429, {}, 'Internal details', new Headers()));
+    const limited = await handleRewriteRequest(request(skillsPayload)); expect(limited.status).toBe(429); expect(await limited.json()).toEqual({ error: rewriteMessages.failure });
+    parse.mockRejectedValue(new OpenAI.APIConnectionTimeoutError());
+    expect((await handleRewriteRequest(request(skillsPayload))).status).toBe(504);
+  });
+});

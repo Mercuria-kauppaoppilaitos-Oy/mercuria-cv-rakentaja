@@ -3,7 +3,7 @@ import { Buffer } from 'buffer/';
 import { z } from 'zod';
 import type { CvData } from '../cv-model';
 import { CvPdfDocument } from './CvPdfDocument';
-import { registerPdfFonts } from './pdf-fonts';
+import { preparePdfFonts } from './pdf-fonts';
 import type { CvPdfOptions } from './pdf-options';
 import { pdfCacheKey, preparePdfInput, type PdfInput, type PdfResult } from './pdf-input';
 import { selectPdfDensity } from './pdf-density';
@@ -18,7 +18,8 @@ export function renderCvPdf(input: PdfInput, density: CvDensity, signal?: AbortS
   const render = async () => {
     signal?.throwIfAborted();
     if (typeof globalThis.Buffer === 'undefined') Object.defineProperty(globalThis, 'Buffer', { value: Buffer, configurable: true, writable: true });
-    registerPdfFonts();
+    await preparePdfFonts();
+    signal?.throwIfAborted();
     let pageCount = 0;
     const blob = await pdf(<CvPdfDocument data={input.data} includePhoto={input.includePhoto} density={density} onRender={(result) => {
       pageCount = completedLayout.parse(result)._INTERNAL__LAYOUT__DATA_.children.length;

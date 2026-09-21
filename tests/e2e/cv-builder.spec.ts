@@ -81,17 +81,17 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
     await page.getByLabel('Tehtävänimike tai kokemuksen tyyppi').fill('Harjoittelija');
     await page.getByLabel('Tehtävät ja saavutukset').fill(original);
     expect(requests).toHaveLength(0);
-    await page.getByRole('button', { name: 'Jalosta tekoälyllä' }).click();
+    await page.getByRole('button', { name: 'Paranna tekoälyllä' }).click();
     await expect(page.getByRole('heading', { name: 'Tekoälyn tekstiehdotus' })).toBeFocused();
     await expect(page.getByLabel('Tehtävät ja saavutukset')).toHaveValue(original);
     await expect(page.locator('.rewrite-proposal')).toContainText(suggestion);
-    expect(requests).toEqual([{ textType: 'workExperience', sourceText: original, jobTitle: 'Harjoittelija' }]);
+    expect(requests).toEqual([{ operation: 'rewrite', textType: 'workExperience', sourceText: original, jobTitle: 'Harjoittelija' }]);
     await page.addScriptTag({ content: axe.source });
     const violations = await page.evaluate(async () => (await (window as unknown as { axe: typeof axe }).axe.run(document)).violations);
     expect(violations).toEqual([]);
     await page.getByRole('button', { name: 'Käytä ehdotusta' }).click();
     await expect(page.getByLabel('Tehtävät ja saavutukset')).toHaveValue(suggestion);
-    await expect(page.getByRole('button', { name: 'Jalosta tekoälyllä' })).toBeFocused();
+    await expect(page.getByRole('button', { name: 'Paranna tekoälyllä' })).toBeFocused();
     if (viewport.width < 768) await page.getByRole('button', { name: 'Esikatselu', exact: true }).click();
     expect(await previewText(page)).toContain(suggestion);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -385,6 +385,7 @@ for (const width of [1440, 390]) {
     await page.getByLabel('HEX-väri').fill('#203040');
     await page.getByLabel('Sisällytä valokuva PDF:ään').uncheck();
     await page.getByRole('button', { name: 'Aloita alusta', exact: true }).click();
+    await page.getByRole('button', { name: 'Oletko varma?', exact: true }).click();
     await expect(page.getByLabel('Etunimi', { exact: true })).toHaveValue('');
     await expect(page.getByRole('button', { name: 'Poista kuva' })).toHaveCount(0);
     await page.reload();
@@ -467,21 +468,89 @@ for (const width of [1440, 390]) {
     const field = page.getByRole('textbox', { name: 'Esittely', exact: true }); await field.fill(original);
     let mode: number | 'network' = 503; let calls = 0;
     await page.route('**/api/rewrite-text', async (route) => {
-      calls++; expect(route.request().postDataJSON()).toEqual({ textType: 'profile', sourceText: original });
+      calls++; expect(route.request().postDataJSON()).toEqual({ operation: 'rewrite', textType: 'profile', sourceText: original });
       if (mode === 'network') await route.abort();
       else await route.fulfill({ status: mode, contentType: 'application/json', body: JSON.stringify(mode === 200 ? { suggestion: 'Opiskelen liiketoimintaa ja harjoittelen asiakaspalvelua.' } : { error: 'Internal secret must not appear' }) });
     });
     for (const status of [503, 429, 504, 'network'] as const) {
       mode = status; const before = calls;
-      await page.getByRole('button', { name: 'Jalosta tekoälyllä' }).click();
+      await page.getByRole('button', { name: 'Paranna tekoälyllä' }).click();
       await expect(page.locator('.rewrite-error')).not.toBeEmpty();
       await expect(field).toHaveValue(original); expect(calls).toBe(before + 1);
       await expect(page.getByText('Internal secret must not appear')).toHaveCount(0);
     }
-    mode = 200; await page.getByRole('button', { name: 'Jalosta tekoälyllä' }).click();
+    mode = 200; await page.getByRole('button', { name: 'Paranna tekoälyllä' }).click();
     await expect(page.getByRole('heading', { name: 'Tekoälyn tekstiehdotus' })).toBeFocused();
     await page.getByRole('button', { name: 'Käytä ehdotusta' }).click();
     await expect(field).toHaveValue('Opiskelen liiketoimintaa ja harjoittelen asiakaspalvelua.');
     expect(await previewText(page)).toContain('Opiskelen liiketoimintaa');
   });
 }
+
+for (const width of [1440, 390]) {
+  test('osaamisehdotukset, välimuisti, vahvistettu nollaus ja tietosuoja ' + width + 'px', async ({ page }) => {
+    await page.setViewportSize({ width, height: 950 });
+    const data = createShortCvFixture(); data.skills = [{ id: 'existing', name: ' ASIAKASPALVELU ' }];
+    await page.addInitScript(({ key, data }) => { if (window !== window.top) return; if (!sessionStorage.getItem(key)) sessionStorage.setItem(key, JSON.stringify({ schemaVersion: 4, persistent: false, data })); }, { key, data });
+    const requests: unknown[] = [];
+    await page.route('**/api/rewrite-text', async (route) => {
+      requests.push(route.request().postDataJSON());
+      await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ skills: ['Asiakaspalvelu', 'Hyllytys', 'Tuotteiden esillepano ja myymälän siisteydestä huolehtiminen'] }) });
+    });
+    const errors: string[] = []; page.on('pageerror', (error) => errors.push(error.message));
+    const go = async (index: number, label: string) => { if (width < 768) await page.locator('#active-step').selectOption(String(index)); else await step(page, label); };
+    await page.goto('/'); await expect(page.getByText('Tietosuoja ja luonnoksen säilyminen', { exact: true })).toHaveCount(0);
+    await go(4, 'Osaaminen'); expect(requests).toHaveLength(0);
+    const button = page.getByRole('button', { name: 'Ehdota tekoälyllä' });
+    await expect(button.locator('svg')).toHaveAttribute('aria-hidden', 'true');
+    await button.focus(); await page.keyboard.press('Enter');
+    const panel = page.getByRole('region', { name: 'Osaamisehdotukset' }); await expect(panel).toBeVisible(); expect(requests).toHaveLength(1);
+    expect(requests[0]).toEqual({ operation: 'suggest-skills', source: {
+      professionalTitle: data.personalDetails.professionalTitle, summary: data.summary,
+      workExperience: data.workExperience.map(({ title, description }) => ({ title, description })),
+      education: data.education.map(({ qualification, description }) => ({ qualification, description })),
+    } });
+    expect(await previewText(page)).not.toContain('Tuotteiden esillepano ja myymälän siisteydestä huolehtiminen');
+    await expect(panel.getByRole('button', { name: /Asiakaspalvelu/ })).toHaveAttribute('aria-pressed', 'true');
+    await panel.getByRole('button', { name: /Hyllytys/ }).dblclick();
+    await expect(page.getByRole('textbox', { name: 'Osaaminen', exact: true })).toHaveCount(2);
+    await page.screenshot({ path: 'test-results/skill-suggestions-' + width + '.png' });
+    await panel.getByRole('button', { name: 'Lisää kaikki' }).click();
+    await expect(page.getByRole('textbox', { name: 'Osaaminen', exact: true })).toHaveCount(3);
+    expect(await previewText(page)).toContain('Tuotteiden esillepano ja myymälän siisteydestä huolehtiminen');
+    const url = await page.locator('.pdf-frame-current').getAttribute('src'); await page.waitForTimeout(1200);
+    await expect(page.locator('.pdf-frame-current')).toHaveAttribute('src', url!);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    await page.addScriptTag({ content: axe.source });
+    expect(await page.evaluate(async () => (await (window as unknown as { axe: typeof axe }).axe.run(document)).violations)).toEqual([]);
+    await go(1, 'Esittely'); await expect(page.getByRole('button', { name: 'Paranna tekoälyllä' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Jalosta tekoälyllä' })).toHaveCount(0);
+    await go(4, 'Osaaminen'); await expect(panel).toBeVisible(); await button.click(); expect(requests).toHaveLength(1);
+    await page.reload(); await go(4, 'Osaaminen'); await expect(panel).toBeVisible(); expect(requests).toHaveLength(1);
+    await go(6, 'Viimeistele'); const privacy = page.locator('.privacy-details');
+    await expect(privacy).not.toHaveAttribute('open'); await privacy.locator('summary').focus(); await page.keyboard.press('Enter'); await expect(privacy).toHaveAttribute('open', '');
+    await expect(privacy).toContainText('OpenAI');
+    await page.getByRole('button', { name: 'Aloita alusta', exact: true }).click(); await expect(page.getByRole('button', { name: 'Oletko varma?' })).toBeFocused();
+    await page.keyboard.press('Escape'); await expect(page.getByRole('button', { name: 'Aloita alusta', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Aloita alusta', exact: true }).click(); await page.getByRole('button', { name: 'Oletko varma?' }).click();
+    await expect(page.getByRole('heading', { name: 'Perustiedot', exact: true })).toBeFocused();
+    expect(await page.evaluate(() => sessionStorage.getItem('mercuria-cv-skills-v1'))).toBeNull();
+    await go(4, 'Osaaminen'); await button.click(); await expect(page.getByText('Lisää ensin sisältöä esittelyyn, työkokemukseen tai koulutukseen.')).toBeVisible(); expect(requests).toHaveLength(1);
+    expect(errors).toEqual([]);
+  });
+}
+
+test('Harjoittelija ja suosittelijan koko nimi säilyvät toistuvissa PDF-päivityksissä ja latauksessa', async ({ page }) => {
+  const data = createShortCvFixture(); data.workExperience[1]!.title = 'Harjoittelija '; data.references[0]!.name = 'Hanna Åäkkönen';
+  await page.addInitScript(({ key, data }) => sessionStorage.setItem(key, JSON.stringify({ schemaVersion: 4, persistent: false, data })), { key, data });
+  await page.goto('/'); await step(page, 'Työkokemus');
+  const title = page.getByRole('group', { name: 'Työkokemus 2', exact: true }).getByLabel('Tehtävänimike tai kokemuksen tyyppi');
+  for (const text of ['H', 'Harjoittelija ', 'Taloushallinnon harjoittelija', 'Harjoittelija']) {
+    await title.fill(text); const pdf = await previewText(page); expect(pdf).toContain(text.trim()); expect(pdf).toContain('Hanna Åäkkönen');
+  }
+  await step(page, 'Lisäosiot'); await page.getByRole('group', { name: 'Suosittelija 1', exact: true }).getByLabel('Nimi', { exact: true }).fill('Testi Suosittelija');
+  expect(await previewText(page)).toContain('Testi Suosittelija');
+  await step(page, 'Viimeistele'); const bytes = await previewBytes(page);
+  const download = page.waitForEvent('download'); await page.getByRole('button', { name: 'Lataa CV PDF-muodossa' }).click();
+  expect(Array.from(await readFile((await (await download).path())!))).toEqual(bytes);
+});

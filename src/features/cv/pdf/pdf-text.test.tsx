@@ -1,8 +1,10 @@
+import { getCvSections, getFullName } from '../cv-content';
+import { Font } from '@react-pdf/renderer';
 // @vitest-environment node
 import { beforeAll, expect, it } from 'vitest';
 import { createRequire } from 'node:module';
 import { spawnSync } from 'node:child_process';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { getDocument, OPS } from 'pdfjs-dist/legacy/build/pdf.mjs';
@@ -379,3 +381,55 @@ it.each([['#E9E1D8', '#000000'], ['#203040', '#ffffff']])('otsake ja Esittely k�
     expect(result.text).toContain('ESITTELY Esittelytekstin kontrasti säilyy. https://example.com');
   } finally { await result.destroy(); }
 });
+
+// A glyph first loaded by ID (for example during font subsetting) can have no
+// Unicode mapping in fontkit's shared cache. Reproduce that state explicitly.
+it('säilyttää Harjoittelija-nimikkeen ja suosittelijan alkukirjaimet myös tyhjällä glyph-mappingilla', async () => {
+  const descriptor = { fontFamily: 'CvBody', fontWeight: 700 };
+  await Font.load(descriptor);
+  const font = Font.getFont(descriptor).data!;
+  const glyphs = [72, 84].map((point) => font.glyphForCodePoint(point));
+  const mappings = glyphs.map((glyph) => [...glyph.codePoints]);
+  glyphs.forEach((glyph) => { glyph.codePoints.length = 0; });
+  const data = createShortCvFixture(); data.workExperience[1]!.title = 'Harjoittelija ';
+  data.references[0]!.name = 'Testi Suosittelija';
+  try {
+    const result = await readPdf(data);
+    try {
+      expect(result.text).toContain('Harjoittelija');
+      expect(result.text).toContain('Testi Suosittelija');
+    } finally { await result.destroy(); }
+  } finally { glyphs.forEach((glyph, index) => { glyph.codePoints.splice(0, glyph.codePoints.length, ...mappings[index]!); }); }
+});
+
+it.each(['comfortable', 'compact', 'tight', 'long'] as const)('kaikki näkyvät CV-tekstit säilyvät merkki merkiltä: %s', async (density) => {
+  const data = density === 'long' ? createLongCvFixture() : createShortCvFixture();
+  data.workExperience[1]!.title = 'Harjoittelija ';
+  data.references[0]!.name = 'Hanna Åäkkönen';
+  const expected = [getFullName(data.personalDetails), data.personalDetails.professionalTitle,
+    [data.personalDetails.email, data.personalDetails.phone, data.personalDetails.city, data.personalDetails.linkedIn].filter(Boolean).join(' · '),
+    ...getCvSections(data).flatMap((section) => [section.heading, ...(section.kind === 'entries' ? section.entries.flatMap((entry) => [entry.title, ...entry.lines, entry.paragraph])
+      : section.kind === 'list' ? section.items.map((item) => (section.id === 'cv-certifications-title' ? '• ' : '') + item.text) : [section.text])]),
+  ].join(' ').replace(/\s+/g, ' ').trim();
+  const result = await readPdf(data, true, density === 'long' ? undefined : density);
+  try {
+    expect(result.text).toBe(expected);
+    if (density === 'compact') {
+      const { createCanvas } = require('@napi-rs/canvas');
+      const page = await result.document.getPage(1); const viewport = page.getViewport({ scale: 2 });
+      const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
+      await page.render({ canvas, viewport }).promise;
+      await mkdir('test-results', { recursive: true });
+      await writeFile('test-results/pdf-all-texts.png', canvas.toBuffer('image/png'));
+      // Verify actual rendered ink at the start of both reported problem fields.
+      for (const title of ['Harjoittelija', 'Hanna Åäkkönen']) {
+        const item = result.pages[0]!.items.find((item) => item.str === title)!;
+        expect(item).toBeDefined();
+        const [x, y] = viewport.convertToViewportPoint(item.transform[4], item.transform[5]);
+        const pixels = canvas.getContext('2d').getImageData(Math.floor(x), Math.floor(y - item.height * 2), 7, Math.ceil(item.height * 2)).data;
+        let ink = 0; for (let i = 0; i < pixels.length; i += 4) if (pixels[i] < 100 && pixels[i + 1] < 100 && pixels[i + 2] < 100) ink++;
+        expect(ink, title + ' first-letter ink').toBeGreaterThan(5);
+      }
+    }
+  } finally { await result.destroy(); }
+}, 30000);

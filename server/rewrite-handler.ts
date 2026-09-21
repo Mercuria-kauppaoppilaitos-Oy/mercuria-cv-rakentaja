@@ -2,8 +2,8 @@ import OpenAI from 'openai';
 import { APIConnectionTimeoutError } from 'openai/core/error';
 import { zodTextFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
-import { rewriteMessages, rewriteRequestSchema, rewriteResponseSchema } from '../shared/rewrite-contract.js';
-import { rewritePrompts } from './rewrite-prompts.js';
+import { rewriteMessages, aiRequestSchema, rewriteResponseSchema, skillsResponseSchema } from '../shared/rewrite-contract.js';
+import { rewritePrompts, skillsPrompt } from './rewrite-prompts.js';
 
 export const rewriteTimeoutMs = 15_000;
 export const maxRewriteBodyBytes = 8192;
@@ -75,7 +75,7 @@ export async function handleRewriteRequest(request: Request): Promise<Response> 
       if (controller.signal.aborted) return json({ error: rewriteMessages.timeout }, 504);
       return json({ error: rewriteMessages.failure }, error instanceof BodyTooLarge ? 413 : 400);
     }
-    const parsed = rewriteRequestSchema.safeParse(raw);
+    const parsed = aiRequestSchema.safeParse(raw);
     if (!parsed.success) return json({ error: rewriteMessages.failure }, 400);
     if (!process.env.OPENAI_API_KEY) {
       if (process.env.NODE_ENV !== 'production') console.warn('OPENAI_API_KEY environment variable is missing.');
@@ -83,18 +83,20 @@ export async function handleRewriteRequest(request: Request): Promise<Response> 
     }
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, maxRetries: 0, timeout: rewriteTimeoutMs, logLevel: 'off' });
     const model = process.env.OPENAI_MODEL?.trim() || 'gpt-5.6-luna';
-    const { textType, sourceText, jobTitle } = parsed.data;
+    const operation = parsed.data;
+    const skills = operation.operation === 'suggest-skills';
+    const input = skills ? operation.source : { sourceText: operation.sourceText, ...(operation.jobTitle ? { jobTitle: operation.jobTitle } : {}) };
     const response = await client.responses.parse({
       model,
-      instructions: rewritePrompts[textType],
-      input: [{ role: 'user', content: JSON.stringify({ sourceText, ...(jobTitle ? { jobTitle } : {}) }) }],
-      text: { format: zodTextFormat(outputSchema, 'cv_rewrite') },
+      instructions: skills ? skillsPrompt : rewritePrompts[operation.textType],
+      input: [{ role: 'user', content: JSON.stringify(input) }],
+      text: { format: skills ? zodTextFormat(z.object({ skills: z.array(z.string()) }).strict(), 'cv_skills') : zodTextFormat(outputSchema, 'cv_rewrite') },
       ...(/^(?:gpt-5(?:[.-]|$)|gpt-6(?:[.-]|$)|o[134](?:-|$))/u.test(model) ? { reasoning: { effort: 'low' as const } } : {}),
       max_output_tokens: 1200,
       store: false,
     }, { signal: controller.signal });
     if (controller.signal.aborted) return json({ error: rewriteMessages.timeout }, 504);
-    const output = rewriteResponseSchema.safeParse(response.output_parsed);
+    const output = skills ? skillsResponseSchema.safeParse(response.output_parsed) : rewriteResponseSchema.safeParse(response.output_parsed);
     const refused = response.output?.some((item) => item.type === 'message' && item.content.some((content) => content.type === 'refusal'));
     if (response.status !== 'completed' || refused || !output.success) return json({ error: rewriteMessages.failure }, 502);
     return json(output.data, 200);

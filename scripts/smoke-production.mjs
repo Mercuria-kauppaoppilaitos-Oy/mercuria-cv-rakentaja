@@ -99,8 +99,8 @@ try {
   }
   const { Responses } = await import('openai/resources/responses/responses');
   const suggestion = 'Opettelen asiakaspalvelua opiskelijana.';
-  const parse = mock.method(Responses.prototype, 'parse', async () => ({
-    status: 'completed', output_parsed: { suggestion }, output: [],
+  const parse = mock.method(Responses.prototype, 'parse', async (options) => ({
+    status: 'completed', output_parsed: options.text.format.name === 'cv_skills' ? { skills: ['Asiakaspalvelu'] } : { suggestion }, output: [],
   }));
   try {
     process.env.OPENAI_API_KEY = 'smoke-placeholder-not-a-real-key';
@@ -111,6 +111,12 @@ try {
     assert.equal(response.status, 200);
     assert.deepEqual(await response.json(), { suggestion });
     assert.equal(parse.mock.callCount(), 1);
+    const skills = await fetch(base + '/api/rewrite-text', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Origin: base },
+      body: JSON.stringify({ operation: 'suggest-skills', source: { professionalTitle: '', summary: 'Palvelin asiakkaita myymälässä.', workExperience: [], education: [] } }),
+    });
+    assert.equal(skills.status, 200); assert.deepEqual(await skills.json(), { skills: ['Asiakaspalvelu'] });
+    assert.equal(parse.mock.callCount(), 2);
   } finally { parse.mock.restore(); process.env.OPENAI_API_KEY = ''; }
   // Prove that every original extensionless import would fail in a fresh Node process.
   for (const [module, specifier] of [

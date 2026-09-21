@@ -21,7 +21,7 @@ async function profile() {
   await selectStep(user, 'Esittely');
   const field = screen.getByRole('textbox', { name: 'Esittely' });
   fireEvent.change(field, { target: { value: original } });
-  return { user, field, opener: screen.getByRole('button', { name: 'Jalosta tekoälyllä' }) };
+  return { user, field, opener: screen.getByRole('button', { name: 'Paranna tekoälyllä' }) };
 }
 
 describe('Optional field-level AI suggestions', () => {
@@ -37,7 +37,7 @@ describe('Optional field-level AI suggestions', () => {
     await user.click(opener);
     expect(await screen.findByRole('heading', { name: 'Tekoälyn tekstiehdotus' })).toHaveFocus();
     expect(field).toHaveValue(original); expect(preview().getByText(original)).toBeVisible();
-    expect(JSON.parse(fetchMock.mock.calls[0]![1].body)).toEqual({ textType: 'profile', sourceText: original });
+    expect(JSON.parse(fetchMock.mock.calls[0]![1].body)).toEqual({ operation: 'rewrite', textType: 'profile', sourceText: original });
     expect(fetchMock.mock.calls[0]![0]).toBe('/api/rewrite-text'); expect(fetchMock).toHaveBeenCalledTimes(1);
     await user.click(screen.getByRole('button', { name: 'Käytä ehdotusta' }));
     expect(field).toHaveValue(suggestion); expect(preview().getByText(suggestion)).toBeVisible();
@@ -58,7 +58,7 @@ describe('Optional field-level AI suggestions', () => {
     await user.click(screen.getByRole('button', { name: 'Yritä uudelleen' }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     expect(fetchMock.mock.calls.map((call) => JSON.parse(call[1].body))).toEqual([
-      { textType: 'profile', sourceText: original }, { textType: 'profile', sourceText: original },
+      { operation: 'rewrite', textType: 'profile', sourceText: original }, { operation: 'rewrite', textType: 'profile', sourceText: original },
     ]);
     expect(field).toHaveValue(original);
   });
@@ -80,7 +80,7 @@ describe('Optional field-level AI suggestions', () => {
     const pendingResponse = new Promise<Response>((done) => { resolve = done; });
     fetchMock.mockReturnValue(pendingResponse);
     const { user, field, opener } = await profile(); await user.click(opener);
-    expect(opener).toHaveTextContent('Jalostetaan…'); expect(opener).toBeDisabled();
+    expect(opener).toHaveTextContent('Parannetaan…'); expect(opener).toBeDisabled();
     await act(async () => { fireEvent.click(opener); });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     await user.type(field, ' Opin uutta.');
@@ -100,8 +100,8 @@ describe('Optional field-level AI suggestions', () => {
     await user.click(screen.getByRole('button', { name: 'Lisää työkokemus' }));
     await user.type(work(2).getByLabelText('Tehtävänimike tai kokemuksen tyyppi'), 'Harjoittelija');
     fireEvent.change(work(2).getByLabelText('Tehtävät ja saavutukset'), { target: { value: original } });
-    await user.click(work(2).getByRole('button', { name: 'Jalosta tekoälyllä' }));
-    expect(JSON.parse(fetchMock.mock.calls[0]![1].body)).toEqual({ textType: 'workExperience', sourceText: original, jobTitle: 'Harjoittelija' });
+    await user.click(work(2).getByRole('button', { name: 'Paranna tekoälyllä' }));
+    expect(JSON.parse(fetchMock.mock.calls[0]![1].body)).toEqual({ operation: 'rewrite', textType: 'workExperience', sourceText: original, jobTitle: 'Harjoittelija' });
     await user.click(work().getByRole('button', { name: /^Poista työkokemus/ }));
     await user.click(screen.getByRole('button', { name: 'Lisää työkokemus' }));
     await act(async () => resolve(response()));
@@ -114,7 +114,7 @@ describe('Optional field-level AI suggestions', () => {
     fetchMock.mockReturnValue(new Promise<Response>((done) => { resolve = done; }));
     const user = userEvent.setup(); render(<App />); await addEntry(user, 'Lisää työkokemus');
     fireEvent.change(work().getByLabelText('Tehtävät ja saavutukset'), { target: { value: original } });
-    await user.click(work().getByRole('button', { name: 'Jalosta tekoälyllä' }));
+    await user.click(work().getByRole('button', { name: 'Paranna tekoälyllä' }));
     await user.click(work().getByRole('button', { name: /^Poista työkokemus/ }));
     expect(fetchMock.mock.calls[0]![1].signal.aborted).toBe(true);
     await user.click(screen.getByRole('button', { name: 'Lisää työkokemus' })); await act(async () => resolve(response()));

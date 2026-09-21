@@ -87,6 +87,8 @@ it('Aloita alusta nollaa CV:n, ulkoasun ja istuntoluonnoksen heti myös Viimeist
   await user.clear(screen.getByLabelText('HEX-väri'));
   await user.type(screen.getByLabelText('HEX-väri'), '#203040');
   await user.click(screen.getByRole('button', { name: 'Aloita alusta' }));
+  expect(screen.getByLabelText('HEX-väri')).toHaveValue('#203040');
+  await user.click(screen.getByRole('button', { name: 'Oletko varma?' }));
   expect(screen.getByLabelText('Etunimi', { exact: true })).toHaveValue('');
   window.dispatchEvent(new Event('pagehide'));
   const stored = JSON.parse(sessionStorage.getItem('mercuria-cv-draft-v1')!);

@@ -1,3 +1,4 @@
+import { SkillsCache, SkillsCacheContext } from './features/cv/ai/skill-suggestions';
 import { CvPdfProvider } from './features/cv/pdf/CvPdfProvider';
 import { useEffect, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
@@ -12,6 +13,7 @@ import { loadDraft } from './features/cv/draft-storage';
 import { useDraftStorage } from './features/cv/useDraftStorage';
 
 export function App() {
+  const [skillsCache] = useState(() => new SkillsCache());
   const [initialDraft] = useState(loadDraft);
   const form = useForm<CvData>({ defaultValues: initialDraft.data, resolver: zodResolver(cvSchema), mode: 'onChange', shouldUnregister: false });
   const data = useWatch({ control: form.control }) as CvData;
@@ -33,6 +35,7 @@ export function App() {
     setMobileView('form');
   };
   const startOver = () => {
+    skillsCache.clear();
     const empty = createEmptyCv();
     draft.replace(empty);
     form.reset(empty);
@@ -47,6 +50,7 @@ export function App() {
 
   return (
     <CvPdfProvider key={resetVersion} data={data} includePhoto={includePhoto}>
+    <SkillsCacheContext.Provider value={skillsCache}>
     <div className="app-shell">
       <a className="skip-link" href="#main">Siirry sisältöön</a>
       <header className="site-header">
@@ -61,7 +65,6 @@ export function App() {
         </div>
         <div id="form-panel" className="form-column" hidden={mobile && mobileView !== 'form'}>
           <div className="intro"><p className="eyebrow">SEURAAVA ASKEL URALLASI</p><h1>Hyvä CV alkaa sinusta.</h1></div>
-          <details className="privacy-details"><summary>Tietosuoja ja luonnoksen säilyminen</summary><p>CV-tiedot säilyvät normaalisti tällä laitteella. Tekoälytoimintoa käytettäessä vain käsiteltäväksi valitsemasi kentän teksti ja mahdollinen tehtävänimike lähetetään tekoälypalvelulle. Kuva pienennetään selaimessa. Istuntoluonnos suojaa sivun vahinkopäivitykseltä. Luonnos säilyy vain tässä selainistunnossa.</p></details>
           {draft.notice && <div className="draft-notice"><p role="status">{draft.notice}</p><button type="button" aria-label="Sulje luonnosilmoitus" onClick={draft.dismissNotice}>Sulje</button></div>}
           {draft.error && <p role="alert" className="field-error">{draft.error}</p>}
           {compact && !mobile && <button className="preview-toggle" type="button" aria-expanded={showPreview} aria-controls="preview-panel" onClick={() => setShowPreview(!showPreview)}>{showPreview ? 'Piilota esikatselu' : 'Näytä esikatselu'}</button>}
@@ -72,6 +75,7 @@ export function App() {
         </aside>
       </main>
     </div>
+    </SkillsCacheContext.Provider>
     </CvPdfProvider>
   );
 }

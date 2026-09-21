@@ -1,3 +1,4 @@
+import { StartOverButton } from './StartOverButton';
 import { cvSteps } from './cv-steps';
 
 export function CvStepNavigation({ activeStep, onSelect, mobile, onReset }: { activeStep: number; onSelect: (step: number) => void; mobile: boolean; onReset: () => void }) {
@@ -9,14 +10,14 @@ export function CvStepNavigation({ activeStep, onSelect, mobile, onReset }: { ac
           <span className="step-number" aria-hidden="true">{index + 1}</span><span>{label}</span>
         </button>
       </li>)}</ol>
-      <button type="button" className="start-over" onClick={onReset}>Aloita alusta</button>
+      <StartOverButton activeStep={activeStep} onReset={onReset} />
     </nav>
     <div className="mobile-step-selector" hidden={!mobile}>
       <label htmlFor="active-step">Vaihe {activeStep + 1} / {cvSteps.length}</label>
       <select id="active-step" value={activeStep} onChange={(event) => onSelect(Number(event.target.value))}>
         {cvSteps.map((label, index) => <option key={label} value={index}>{index + 1}. {label}</option>)}
       </select>
-      <button type="button" className="start-over" onClick={onReset}>Aloita alusta</button>
+      <StartOverButton activeStep={activeStep} onReset={onReset} />
     </div>
   </>;
 }

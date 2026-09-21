@@ -1,3 +1,4 @@
+import { AiButton } from './AiButton';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { rewriteMessages, type RewriteRequest } from '../../../../shared/rewrite-contract';
@@ -37,7 +38,7 @@ export function CvTextRewrite(props: Props) {
     if (request.current) return;
     const original = previous?.original ?? sourceText;
     const payload = previous?.payload ?? {
-      textType, sourceText: original,
+      operation: 'rewrite' as const, textType, sourceText: original,
       ...(props.textType === 'workExperience' && props.jobTitle.trim() ? { jobTitle: props.jobTitle } : {}),
     };
     if (original.trim().length < 10) { setError(rewriteMessages.short); return; }
@@ -72,7 +73,7 @@ export function CvTextRewrite(props: Props) {
   }
   return <div className="text-rewrite">
     {(short || long) && <p id={`${id}-help`} className="field-help">{short ? rewriteMessages.short : rewriteMessages.long}</p>}
-    <button ref={opener} type="button" disabled={short || long || busy || Boolean(proposal)} aria-describedby={short || long ? `${id}-help` : undefined} onClick={() => void start()}>{busy ? 'Jalostetaan…' : 'Jalosta tekoälyllä'}</button>
+    <AiButton ref={opener} type="button" disabled={short || long || busy || Boolean(proposal)} aria-describedby={short || long ? `${id}-help` : undefined} onClick={() => void start()}>{busy ? 'Parannetaan…' : 'Paranna tekoälyllä'}</AiButton>
     <p className="field-error rewrite-error" aria-live="polite" aria-atomic="true">{error}</p>
     {proposal && <section className="rewrite-proposal" aria-labelledby={`${id}-heading`} onKeyDown={(event) => {
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); }
@@ -82,7 +83,7 @@ export function CvTextRewrite(props: Props) {
       <h5>Ehdotus</h5><p className="rewrite-copy">{proposal.suggestion}</p>
       <div className="rewrite-actions">
         <button type="button" className="add-button" disabled={busy} onClick={accept}>Käytä ehdotusta</button>
-        <button type="button" disabled={busy} onClick={() => void start(proposal)}>{busy ? 'Jalostetaan…' : 'Yritä uudelleen'}</button>
+        <button type="button" disabled={busy} onClick={() => void start(proposal)}>{busy ? 'Parannetaan…' : 'Yritä uudelleen'}</button>
         <button type="button" onClick={close}>Peruuta</button>
       </div>
     </section>}

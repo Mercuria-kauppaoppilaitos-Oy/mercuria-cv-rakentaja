@@ -1,3 +1,4 @@
+import { CvSkillSuggestions } from './ai/CvSkillSuggestions';
 import { useRef } from 'react';
 import { useFieldArray, useWatch, type FieldPath, type UseFormReturn } from 'react-hook-form';
 import { createEmptyAdditionalEntry, languageLevels, type AdditionalSection, type CvData } from './cv-model';
@@ -46,6 +47,7 @@ export function CvAdditionalFields({ form, name }: { form: UseFormReturn<CvData>
           <option value="hidden">Piilota osio</option>
         </select>
       </div>}
+      {name === 'skills' && <CvSkillSuggestions form={form} append={(entries) => append(entries, { shouldFocus: false })} />}
       {fields.map((field, index) => (
         <fieldset key={field.fieldId} className="history-entry compact-entry">
           <legend>{config.entry} {index + 1}</legend>

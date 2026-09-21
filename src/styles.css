@@ -186,3 +186,19 @@ button:disabled { cursor: default; opacity: .5; }
 .month-field { display: flex; flex-direction: column; }
 .month-field > label { flex: 1; }
 .month-picker > select, .month-picker > button { height: 3rem; min-height: 3rem; }
+
+/* Shared, quiet AI actions and selectable suggestions. */
+.ai-button { display: inline-flex; align-items: center; justify-content: center; gap: .45rem; padding: .55rem .85rem; border: 1px solid #a9b6ca; border-radius: .65rem; background: #f0f4fa; color: #19365d; font-weight: 600; }
+.ai-button svg { flex: 0 0 auto; }
+.ai-button:hover:not(:disabled) { background: #e3ebf6; border-color: #7085a4; }
+.ai-button:active:not(:disabled) { background: #d5e1f0; }
+.ai-button:disabled { opacity: .6; cursor: not-allowed; }
+.ai-button:focus-visible, .skill-chips button:focus-visible { outline: 3px solid #174a85; outline-offset: 3px; }
+.skill-suggestions { margin: .75rem 0 1rem; }
+.skill-suggestions-heading { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; justify-content: space-between; }
+.skill-suggestions-heading h4 { margin: .5rem 0; }
+.skill-suggestions-heading button { padding: .4rem .65rem; }
+.skill-chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .5rem; }
+.skill-chips button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; text-align: left; border-radius: 1.2rem; padding: .4rem .7rem; background: #f7f8fa; }
+.skill-chips button[aria-pressed="true"] { background: #edf3ed; border-color: #719071; color: #294329; }
+.start-over.start-over-confirm { background: #fff0e7; border-color: #a45c34; color: #76360f; }

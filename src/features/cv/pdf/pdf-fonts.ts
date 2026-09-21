@@ -16,3 +16,24 @@ export function registerPdfFonts(sources = pdfFontSources): void {
   Font.registerHyphenationCallback((word) => [word]);
   registered = true;
 }
+
+/** fontkit can cache glyphs by ID without Unicode codePoints (e.g. subsetting).
+ * textkit then loses those characters. Seed cmap glyphs before layout and repair
+ * only empty mappings; preserve existing mappings, ligatures and glyph outlines.
+ * Kept here as a version-sensitive adapter, covered by real PDF regressions.
+ */
+export async function preparePdfFonts(): Promise<void> {
+  registerPdfFonts();
+  for (const fontFamily of ['CvHeading', 'CvBody']) {
+    for (const fontWeight of [400, 700]) {
+      const descriptor = { fontFamily, fontWeight };
+      await Font.load(descriptor);
+      const font = Font.getFont(descriptor).data;
+      if (!font) throw new Error('PDF font unavailable');
+      for (const codePoint of font.characterSet) {
+        const glyph = font.glyphForCodePoint(codePoint);
+        if (glyph.codePoints.length === 0) glyph.codePoints.push(codePoint);
+      }
+    }
+  }
+}
