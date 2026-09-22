@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
 import { readFile } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
 import axe from 'axe-core';
 import { createShortCvFixture, createLongCvFixture } from '../../src/test/cv-fixture';
 const photoPath = fileURLToPath(new URL('../fixtures/photo.png', import.meta.url));
@@ -244,6 +245,8 @@ test('lataa selaimessa tekstipohjaisen ATS-luettavan PDF:n paikallisesti ja vast
   await page.getByRole('button', { name: 'Lisää työkokemus' }).click();
   await page.getByLabel('Tehtävänimike tai kokemuksen tyyppi').fill('Palvelupäällikkö');
   await page.getByLabel('Työnantaja').fill('Testiyritys');
+  const rawSentence = 'Tehtäviini kuului organisaation työelämä- ja yritysyhteistyön toimintamallien kehittäminen sekä raportoinnin';
+  await page.getByLabel('Tehtävät ja saavutukset').fill(`${rawSentence} kehittäminen oli tärkeä osa työtäni.`);
   await step(page, 'Koulutus');
   await page.getByRole('button', { name: 'Lisää koulutus' }).click();
   await page.getByLabel('Tutkinnon tai koulutuksen nimi').fill('Merkonomi');
@@ -259,12 +262,21 @@ test('lataa selaimessa tekstipohjaisen ATS-luettavan PDF:n paikallisesti ja vast
   const bytes = await readFile(path);
   expect(Array.from(bytes)).toEqual(shownBytes);
   expect(bytes.length).toBeGreaterThan(1000); expect(bytes.subarray(0, 5).toString()).toBe('%PDF-');
+  const pdftotext = process.env.PDFTOTEXT_BINARY || 'pdftotext';
+  const probe = spawnSync(pdftotext, ['-v'], { windowsHide: true });
+  if (process.env.PDFTOTEXT_BINARY) expect(probe.error).toBeUndefined();
+  if (!probe.error) {
+    const raw = spawnSync(pdftotext, ['-raw', '-enc', 'UTF-8', path, '-'], { encoding: 'utf8', windowsHide: true });
+    expect(raw.status, raw.stderr).toBe(0);
+    expect(raw.stdout).toContain(rawSentence);
+  } else testInfo.annotations.push({ type: 'Poppler', description: 'pdftotext puuttuu; PDF.js tarkistetaan aina.' });
   // Also verify the PDF produced by the actual browser download, not just Node fixtures.
   const { getDocument, OPS } = await import('pdfjs-dist/legacy/build/pdf.mjs');
   const task = getDocument({ data: new Uint8Array(bytes) });
   const document = await task.promise;
   try {
     const text = (await (await document.getPage(1)).getTextContent()).items.filter((item) => 'str' in item).map((item) => item.str).join(' ').replace(/\s+/g, ' ');
+    expect(text).toContain(rawSentence);
     let offset = 0;
     for (const expected of ['Päivi Määttä', 'Työpäällikkö', 'paivi@example.com', 'Jyväskylä', 'ESITTELY', 'Ääkköset: ä ö å Ä Ö Å', 'TYÖKOKEMUS', 'Palvelupäällikkö', 'Testiyritys', 'KOULUTUS', 'Merkonomi']) {
       const index = text.indexOf(expected, offset); expect(index).toBeGreaterThanOrEqual(offset); offset = index + expected.length;

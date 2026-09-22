@@ -1,5 +1,5 @@
 import { getCvSections, getFullName } from '../cv-content';
-import { Font } from '@react-pdf/renderer';
+import { Document, Font, Page, Text, pdf } from '@react-pdf/renderer';
 // @vitest-environment node
 import { beforeAll, expect, it } from 'vitest';
 import { createRequire } from 'node:module';
@@ -14,7 +14,7 @@ import { createEmptyCv, type CvData } from '../cv-model';
 import { createCvPdf, generateCvPdf, renderCvPdf } from './create-cv-pdf';
 import { preparePdfInput } from './pdf-input';
 import { cvDensityLayouts, type CvDensity } from '../cv-layout';
-import { registerPdfFonts } from './pdf-fonts';
+import { preparePdfFonts, registerPdfFonts } from './pdf-fonts';
 import { migrateLegacySkills } from '../draft-storage';
 
 const require = createRequire(import.meta.url);
@@ -379,14 +379,96 @@ it('piilotetut suosittelijat eivät vuoda PDF:ään ja pyydettäessä-tila tulos
   try { expect(requested.text).toContain('SUOSITTELIJAT Suosittelijat saatavilla pyydettäessä'); expect(requested.text).not.toContain('hidden@example'); } finally { await requested.destroy(); }
 });
 
-const hasPoppler = !spawnSync('pdftotext', ['-v'], { windowsHide: true }).error;
+const pdftotext = process.env.PDFTOTEXT_BINARY || 'pdftotext';
+const popplerProbe = spawnSync(pdftotext, ['-v'], { windowsHide: true });
+if (process.env.PDFTOTEXT_BINARY && popplerProbe.error) throw popplerProbe.error;
+const hasPoppler = !popplerProbe.error;
 if (!hasPoppler) console.info('OHITETTU: pdftotext ei ole asennettu; PDF.js-tekstinpoimintatarkistukset ajetaan aina.');
+
+const spacingSentence = 'Tehtäviini kuului organisaation työelämä- ja yritysyhteistyön toimintamallien kehittäminen sekä raportoinnin';
+const spacingParagraph = `${spacingSentence} kehittäminen oli tärkeä osa työtäni.`;
+const normalizeWhitespace = (text: string) => text.replace(/\s+/g, ' ').trim();
+
+async function extractRawText(bytes: Uint8Array) {
+  const folder = await mkdtemp(join(tmpdir(), 'mercuria-cv-raw-'));
+  try {
+    const path = join(folder, 'cv.pdf');
+    await writeFile(path, bytes);
+    const result = spawnSync(pdftotext, ['-raw', '-enc', 'UTF-8', path, '-'], { encoding: 'utf8', windowsHide: true });
+    expect(result.error).toBeUndefined();
+    expect(result.status, result.stderr).toBe(0);
+    return result.stdout;
+  } finally {
+    if (dirname(resolve(folder)) !== resolve(tmpdir()) || !folder.includes('mercuria-cv-raw-')) throw new Error('Unexpected temporary PDF directory');
+    await rm(folder, { recursive: true, force: true });
+  }
+}
+
+it.skipIf(!hasPoppler).each([undefined, 'left'] as const)('Poppler raw säilyttää välit pienimmässä toistossa: textAlign=%s', async (textAlign) => {
+  await preparePdfFonts();
+  const blob = await pdf(<Document><Page size="A4" style={{ padding: 18 * 72 / 25.4 }}>
+    <Text style={{ fontFamily: 'CvBody', fontSize: 11, textAlign }}>{spacingParagraph}</Text>
+  </Page></Document>).toBlob();
+  const text = await extractRawText(new Uint8Array(await blob.arrayBuffer()));
+  // This exact phrase occupies one full line in the unmodified layout.
+  expect(text).toContain(spacingSentence);
+  expect(normalizeWhitespace(text)).toBe(spacingParagraph);
+});
+
+it.each(['comfortable', 'compact', 'tight'] as const)('pitkän suomenkielisen rivin välit, sivutus ja lukujärjestys säilyvät: %s', async (density) => {
+  const data = createEmptyCv();
+  data.personalDetails.firstName = 'Päivi';
+  data.summary = spacingParagraph;
+  data.workExperience = [{ ...createShortCvFixture().workExperience[0]!, description: spacingParagraph }];
+  data.education = [{ ...createShortCvFixture().education[0]!, description: spacingParagraph }];
+  data.skills = [{ id: 'project', name: `Projektityö: ${spacingParagraph}` }];
+  const source = JSON.stringify(data);
+  const expected = ['Päivi', ...getCvSections(data).flatMap((section) => [section.heading,
+    ...(section.kind === 'entries' ? section.entries.flatMap((entry) => [entry.title, ...entry.lines, entry.paragraph])
+      : section.kind === 'list' ? section.items.map((item) => item.text) : [section.text])])].filter(Boolean).join(' ');
+  const result = await readPdf(data, false, density);
+  try {
+    expect(result.pages).toHaveLength(1);
+    expect(result.pageCount).toBe(1);
+    expect(result.text).toBe(expected);
+    expectIntactEntries(result, data);
+    const extracted = [result.text];
+    if (hasPoppler) {
+      const raw = await extractRawText(result.bytes);
+      expect(raw).toContain(spacingSentence);
+      expect(normalizeWhitespace(raw)).toBe(expected);
+      extracted.push(raw);
+    }
+    const sourceTokens = new Set(expected.split(/\s+/));
+    for (const text of extracted) {
+      for (const token of text.split(/\s+/).filter((token) => token.length >= 40)) {
+        expect(sourceTokens.has(token), `Unexpected joined token: ${token}`).toBe(true);
+      }
+    }
+    await renderRegressionPages(result, `word-spacing-${density}`);
+    expect(JSON.stringify(data)).toBe(source);
+  } finally { await result.destroy(); }
+}, 30000);
+
+it('ActualText säilyttää myös serif-fontin, ligatuurit ja linkkien tekstin', async () => {
+  const data = createEmptyCv();
+  data.personalDetails.firstName = 'Päivi';
+  data.appearance.fontFamily = 'serif';
+  data.summary = 'Office ja fiilis: ääkköset ä ö å Ä Ö Å. https://example.com/office?first=1&second=2';
+  const result = await readPdf(data);
+  try {
+    const expected = `Päivi ESITTELY ${data.summary}`;
+    expect(result.text).toBe(expected);
+    if (hasPoppler) expect(normalizeWhitespace(await extractRawText(result.bytes))).toBe(expected);
+  } finally { await result.destroy(); }
+});
+
 it.skipIf(!hasPoppler)('valinnainen toinen ATS-tekstinpoiminta pdftotext-komennolla', async () => {
   const folder = await mkdtemp(join(tmpdir(), 'mercuria-cv-pdf-'));
   try {
     const blob = await createCvPdf(createLongCvFixture());
     const path = join(folder, 'cv.pdf'); await writeFile(path, new Uint8Array(await blob.arrayBuffer()));
-    const process = spawnSync('pdftotext', ['-enc', 'UTF-8', path, '-'], { encoding: 'utf8', windowsHide: true });
+    const process = spawnSync(pdftotext, ['-enc', 'UTF-8', path, '-'], { encoding: 'utf8', windowsHide: true });
     expect(process.status).toBe(0);
     expectOrder(process.stdout.replace(/\s+/g, ' '), ['Åsa-Maria', 'Ääkköset: ä ö å Ä Ö Å', 'TYÖKOKEMUS', 'KOULUTUS', 'OSAAMINEN', 'SUOSITTELIJAT']);
   } finally {
@@ -495,6 +577,7 @@ it.each(['comfortable', 'compact', 'tight', 'long'] as const)('kaikki näkyvät 
   const result = await readPdf(data, true, density === 'long' ? undefined : density);
   try {
     expect(result.text).toBe(expected);
+    if (hasPoppler) expect(normalizeWhitespace(await extractRawText(result.bytes))).toBe(expected);
     if (density === 'compact') {
       const { createCanvas } = require('@napi-rs/canvas');
       const page = await result.document.getPage(1); const viewport = page.getViewport({ scale: 2 });

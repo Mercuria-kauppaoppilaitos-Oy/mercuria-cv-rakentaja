@@ -9,7 +9,7 @@ import type { CvPdfOptions } from './pdf-options';
 
 const mm = (value: number) => value * 72 / 25.4;
 function createStyles(contentLayout: CvDensityLayout) { return StyleSheet.create({
-  page: { padding: mm(contentLayout.pageMarginMm), fontFamily: 'CvBody', fontSize: 11, lineHeight: 1.6, color: '#292725' },
+  page: { padding: mm(contentLayout.pageMarginMm), fontFamily: 'CvBody', fontSize: 11, lineHeight: 1.6, color: '#292725', textAlign: 'left' },
   header: { marginTop: -mm(contentLayout.pageMarginMm), marginHorizontal: -mm(contentLayout.pageMarginMm), paddingVertical: mm(contentLayout.headerPaddingMm), paddingHorizontal: mm(contentLayout.pageMarginMm), flexDirection: 'row', alignItems: 'center', gap: mm(layout.gapMm) },
   photo: { width: mm(contentLayout.photoDiameterMm), height: mm(contentLayout.photoDiameterMm), borderRadius: mm(contentLayout.photoDiameterMm / 2), objectFit: 'cover', flexShrink: 0 },
   nameBlock: { flex: 1, minWidth: 0 },
@@ -19,12 +19,12 @@ function createStyles(contentLayout: CvDensityLayout) { return StyleSheet.create
   // Letter spacing can cause ATS/PDF readers to insert spaces inside Finnish words.
   heading: { lineHeight: 1.25, fontFamily: 'CvHeading', fontSize: 11.5, fontWeight: 700, marginTop: mm(contentLayout.sectionGapMm), marginBottom: mm(contentLayout.headingGapMm), paddingBottom: mm(contentLayout.decorationGapMm + 1) },
   headingDecoration: { position: 'absolute', bottom: 0, left: 0, width: mm(14), height: mm(1) },
-  summary: { paddingVertical: mm(contentLayout.summaryPaddingMm), paddingHorizontal: mm(5) },
+  summary: { paddingVertical: mm(contentLayout.summaryPaddingMm), paddingHorizontal: mm(5), textAlign: 'left' },
   entry: { marginBottom: mm(contentLayout.entryGapMm) },
   entryTitle: { lineHeight: 1.3, fontSize: 12, fontWeight: 700 },
-  compactLine: { marginTop: 2 },
+  compactLine: { marginTop: 2, textAlign: 'left' },
   metadata: { lineHeight: 1.4, fontSize: 10.5, color: '#6F6963', marginTop: mm(contentLayout.metadataGapMm) },
-  paragraph: { marginTop: mm(contentLayout.descriptionGapMm) },
+  paragraph: { marginTop: mm(contentLayout.descriptionGapMm), textAlign: 'left' },
 }); }
 type PdfStyles = ReturnType<typeof createStyles>;
 export type PdfBlockHeights = ReadonlyMap<string, number>;
