@@ -1,4 +1,5 @@
 import type { CvData } from './cv-model';
+import { sortWorkExperience } from './sort-work-experience';
 
 export type HistoryEntry = CvData['workExperience'][number] | CvData['education'][number];
 export type ContentEntry = { id: string; title: string; lines: string[]; metadata?: boolean; paragraph: string };
@@ -76,7 +77,7 @@ export function getCvSections(data: CvData): CvSection[] {
   const sections: CvSection[] = [];
   if (data.summary.trim()) sections.push({ kind: 'summary', heading: 'ESITTELY', id: 'cv-summary-title', text: data.summary.trim() });
   for (const [source, heading, id] of [
-    [data.workExperience, 'TYÖKOKEMUS', 'cv-work-title'],
+    [sortWorkExperience(data.workExperience), 'TYÖKOKEMUS', 'cv-work-title'],
     [data.education, 'KOULUTUS', 'cv-education-title'],
   ] as const) {
     const entries = getHistoryEntries(source);

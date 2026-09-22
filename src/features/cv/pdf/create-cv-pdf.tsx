@@ -12,6 +12,21 @@ import type { CvDensity } from '../cv-layout';
 // Installed renderer's completed paginated layout; PDF.js tests verify the count
 // against the actual bytes. Fail closed if a future renderer changes this contract.
 const completedLayout = z.object({ _INTERNAL__LAYOUT__DATA_: z.object({ children: z.array(z.object({ type: z.literal('PAGE') })).min(1) }) });
+const measuredNode = z.object({
+  props: z.object({ id: z.string().optional() }).optional(),
+  box: z.object({ height: z.number().nonnegative().optional() }).optional(),
+  get children(): z.ZodOptional<z.ZodArray<typeof measuredNode>> { return z.array(measuredNode).optional(); },
+});
+function readBlockHeights(result: unknown): Map<string, number> {
+  const layout = z.object({ _INTERNAL__LAYOUT__DATA_: measuredNode }).parse(result);
+  const heights = new Map<string, number>();
+  const visit = (node: z.infer<typeof measuredNode>) => {
+    if (node.props?.id) heights.set(node.props.id, z.number().nonnegative().parse(node.box?.height));
+    node.children?.forEach(visit);
+  };
+  visit(layout._INTERNAL__LAYOUT__DATA_);
+  return heights;
+}
 let renderQueue: Promise<unknown> = Promise.resolve();
 
 export function renderCvPdf(input: PdfInput, density: CvDensity, signal?: AbortSignal): Promise<PdfResult> {
@@ -20,8 +35,15 @@ export function renderCvPdf(input: PdfInput, density: CvDensity, signal?: AbortS
     if (typeof globalThis.Buffer === 'undefined') Object.defineProperty(globalThis, 'Buffer', { value: Buffer, configurable: true, writable: true });
     await preparePdfFonts();
     signal?.throwIfAborted();
+    // Measure unsplit blocks with exactly the same width, fonts and density.
+    // Only the second, paginated render is exposed to preview/download callers.
+    let heights = new Map<string, number>();
+    await pdf(<CvPdfDocument data={input.data} includePhoto={input.includePhoto} density={density} measure onRender={(result) => {
+      heights = readBlockHeights(result);
+    }} />).toBlob();
+    signal?.throwIfAborted();
     let pageCount = 0;
-    const blob = await pdf(<CvPdfDocument data={input.data} includePhoto={input.includePhoto} density={density} onRender={(result) => {
+    const blob = await pdf(<CvPdfDocument data={input.data} includePhoto={input.includePhoto} density={density} heights={heights} onRender={(result) => {
       pageCount = completedLayout.parse(result)._INTERNAL__LAYOUT__DATA_.children.length;
     }} />).toBlob();
     signal?.throwIfAborted();

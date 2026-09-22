@@ -381,6 +381,7 @@ for (const width of [1440, 390]) {
     await page.getByLabel('Etunimi', { exact: true }).fill('Poistettava');
     await page.getByLabel('Lisää valokuva').setInputFiles(photoPath);
     await page.getByRole('button', { name: 'Käytä kuvaa' }).click();
+    await expect(page.getByRole('button', { name: 'Poista kuva', exact: true })).toBeVisible();
     if (width < 768) await page.locator('#active-step').selectOption('6'); else await step(page, 'Viimeistele');
     await page.getByLabel('HEX-väri').fill('#203040');
     await page.getByLabel('Sisällytä valokuva PDF:ään').uncheck();
@@ -553,6 +554,24 @@ test('Harjoittelija ja suosittelijan koko nimi säilyvät toistuvissa PDF-päivi
   await step(page, 'Viimeistele'); const bytes = await previewBytes(page);
   const download = page.waitForEvent('download'); await page.getByRole('button', { name: 'Lataa CV PDF-muodossa' }).click();
   expect(Array.from(await readFile((await (await download).path())!))).toEqual(bytes);
+});
+
+test('työkokemusten esitysjärjestys säilyy esikatselussa ja latauksessa muuttamatta luonnosta', async ({ page }) => {
+  const data = createShortCvFixture();
+  data.workExperience.reverse();
+  data.workExperience.push({ ...data.workExperience[0]!, id: 'current-work', title: 'Nykyinen tehtävä', startDate: '2025-01', endDate: '', isCurrent: true });
+  await page.addInitScript(({ key, data }) => { if (window === window.top) sessionStorage.setItem(key, JSON.stringify({ schemaVersion: 4, persistent: false, data })); }, { key, data });
+  await page.goto('/'); await step(page, 'Työkokemus');
+  const titles = page.getByLabel('Tehtävänimike tai kokemuksen tyyppi');
+  for (const [index, entry] of data.workExperience.entries()) await expect(titles.nth(index)).toHaveValue(entry.title);
+  const text = await previewText(page);
+  expect(text.indexOf('Nykyinen tehtävä')).toBeLessThan(text.indexOf('Myymäläharjoittelija'));
+  expect(text.indexOf('Myymäläharjoittelija')).toBeLessThan(text.indexOf('Kesätyöntekijä'));
+  await step(page, 'Viimeistele');
+  const bytes = await previewBytes(page);
+  const download = page.waitForEvent('download'); await page.getByRole('button', { name: 'Lataa CV PDF-muodossa' }).click();
+  expect(Array.from(await readFile((await (await download).path())!))).toEqual(bytes);
+  expect(await page.evaluate((key) => JSON.parse(sessionStorage.getItem(key)!).data.workExperience, key)).toEqual(data.workExperience);
 });
 
 test('pätevyydet ilman luettelomerkkejä samassa esikatselun ja latauksen PDF:ssä', async ({ page }) => {

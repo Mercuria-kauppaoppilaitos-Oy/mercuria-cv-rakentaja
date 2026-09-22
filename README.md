@@ -290,6 +290,14 @@ Onnistuneet ehdotukset tallennetaan sessionStorage-avaimeen mercuria-cv-skills-v
 
 Molemmat AI-operaatiot käyttävät edelleen POST /api/rewrite-text-reittiä. Nykyinen tähän polkuun ja metodiin kohdistuva Vercel WAF -rajoitus kattaa molemmat operaatiot; uutta reittiä tai WAF-muutosta ei tarvita. Tilikohtaisia WAF-asetuksia ei tässä työssä luettu tai muutettu. Palvelimen paikalliset runtime-importit säilyttävät .js-päätteet, ja Node ESM -savutesti ajaa molempien operaatioiden onnistumisen mockatulla SDK:lla.
 
+## PDF:n järjestys ja sivutus
+
+Työkokemukset järjestetään vain sisältömallia muodostettaessa: käynnissä olevat ensin, sitten päättymiskuukausi ja tasatilanteessa aloituskuukausi uusimmasta vanhimpaan. Tasatilanteet säilyvät vakaina. Puutteelliset ja virheelliset ajanjaksot (myös loppu ennen alkua) siirtyvät viimeisiksi alkuperäisessä järjestyksessään; käynnissä oleva työ tarvitsee kelvollisen aloituskuukauden. Lomakkeen ja luonnoksen järjestys sekä koulutusten järjestys säilyvät.
+
+PDF-renderöinti mittaa ensin merkinnät samalla sivuleveydellä, fonteilla ja taittotiheydellä ilman sivunvaihtoja. Varsinainen PDF pitää sivulle mahtuvan työ-, koulutus-, suosittelija- tai luettelomerkinnän kokonaisena ja osio-otsikon ensimmäisen merkinnän yhteydessä. A4:n sisältöaluetta korkeampi merkintä saa jakautua sivuille. Koko osiota ei lukita. Mittaus käyttää rendererin sisäistä taittotulosta, jonka rakenne validoidaan; rendererin päivityksissä tätä sopimusta tulee tarkistaa. Mittaus lisää yhden renderöintikierroksen kutakin kokeiltua tiheyttä kohden. Automaattinen tiheyden valinta, 11 pt leipäteksti, 18 mm marginaalit ja esikatselun/latauksen yhteinen PDF säilyvät.
+
+PDF.js-regressiot tarkistavat lajittelun, merkintöjen sivukohtaisen eheyden, pitkän CV:n ja kaksisivuisen tapauksen kaikilla tiheyksillä sekä sivua pidemmän kuvauksen täydellisen säilymisen. Tekstinpoiminnan järjestystä verrataan sivun tekstikoordinaatteihin ja tekstin näkyvyyttä renderöityihin pikseleihin. Testiajon PDF:t ja sivukuvat tallentuvat hakemistoon `test-results/pdf-pagination/` (Playwright tyhjentää test-results-hakemiston oman ajonsa alussa).
+
 ## PDF:n alkukirjainten säilyminen
 
 Fontkitin jaettu glyph-välimuisti voi sisältää tunnisteella ladatun merkin ilman Unicode-codePoints-kartoitusta. Silloin textkit voi hukata merkin, vaikka lomakkeen ja PDF-syötteen teksti on oikein. Ongelma toistettiin testissä toisen työkokemuksen Harjoittelija-nimikkeen H:lla ja suosittelijan nimen alkukirjaimella. Ilmiöstä on myös [react-pdf:n virheraportti](https://github.com/diegomura/react-pdf/issues/3404).

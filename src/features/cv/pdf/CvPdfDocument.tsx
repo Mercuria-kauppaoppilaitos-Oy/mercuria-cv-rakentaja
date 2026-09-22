@@ -27,6 +27,8 @@ function createStyles(contentLayout: CvDensityLayout) { return StyleSheet.create
   paragraph: { marginTop: mm(contentLayout.descriptionGapMm) },
 }); }
 type PdfStyles = ReturnType<typeof createStyles>;
+export type PdfBlockHeights = ReadonlyMap<string, number>;
+const contentHeight = (layout: CvDensityLayout) => mm(297 - 2 * layout.pageMarginMm);
 // Preserve exact URL characters during text extraction.
 const linkStyle = { textDecoration: 'none' as const, fontFeatureSettings: { liga: false, clig: false } };
 
@@ -36,18 +38,18 @@ function LinkedText({ text, color = '#292725' }: { text: string; color?: string 
     : <Text key={index}>{part.text}</Text>)}</>;
 }
 
-function Entry({ entry, lineHeight, last, contentLayout, styles }: { entry: ContentEntry; lineHeight: number; last: boolean; contentLayout: CvDensityLayout; styles: PdfStyles }) {
-  // Protect the title and the first metadata/content line; descriptions can split.
+function Entry({ entry, lineHeight, last, contentLayout, styles, blockId, heights }: { entry: ContentEntry; lineHeight: number; last: boolean; contentLayout: CvDensityLayout; styles: PdfStyles; blockId: string; heights?: PdfBlockHeights }) {
+  // Oversized entries may split; ordinary entries use their actual measured height.
   const lead: ReactNode[] = [];
   if (entry.title) lead.push(<Text key="title" style={styles.entryTitle} minPresenceAhead={lineHeight + mm(contentLayout.metadataGapMm)}><LinkedText text={entry.title} /></Text>);
   entry.lines.forEach((line, index) => lead.push(<Text key={`line-${index}`} style={entry.metadata ? styles.metadata : undefined}><LinkedText text={line} /></Text>));
-  return <View style={[styles.entry, { marginBottom: last ? 0 : mm(contentLayout.entryGapMm) }]} wrap>
+  return <View id={blockId} style={[styles.entry, { marginBottom: last ? 0 : mm(contentLayout.entryGapMm) }]} wrap={(heights?.get(blockId) ?? Infinity) > contentHeight(contentLayout)}>
     {lead}
     {entry.paragraph && <Text style={styles.paragraph} orphans={2} widows={2}><LinkedText text={entry.paragraph} /></Text>}
   </View>;
 }
 
-function Section({ section, accent, accentText, lineHeight, contentLayout, styles }: { section: CvSection; accent: string; accentText: string; lineHeight: number; contentLayout: CvDensityLayout; styles: PdfStyles }) {
+function Section({ section, accent, accentText, lineHeight, contentLayout, styles, heights }: { section: CvSection; accent: string; accentText: string; lineHeight: number; contentLayout: CvDensityLayout; styles: PdfStyles; heights?: PdfBlockHeights }) {
   // Reserve only the minimum start of the next text block, not four lines of
   // additional content. Keep headings and content in the same page flow.
   const presence = lineHeight * 2 + mm(contentLayout.metadataGapMm);
@@ -57,16 +59,28 @@ function Section({ section, accent, accentText, lineHeight, contentLayout, style
       <View style={[styles.headingDecoration, { backgroundColor: accent }]} />
     </View>
   );
+  if (section.kind === 'entries' || section.kind === 'list') {
+    const count = section.kind === 'entries' ? section.entries.length : section.items.length;
+    const blocks = Array.from({ length: count }, (_, index) => {
+      const blockId = `${section.id}/item/${index}`;
+      return section.kind === 'entries'
+        ? <Entry key={blockId} blockId={blockId} heights={heights} entry={section.entries[index]!} lineHeight={lineHeight} last={index === count - 1} contentLayout={contentLayout} styles={styles} />
+        : <Text key={blockId} id={blockId} wrap={(heights?.get(blockId) ?? Infinity) > contentHeight(contentLayout)} style={[styles.compactLine, { marginTop: index === 0 ? 0 : 2 }]} orphans={1} widows={2}><LinkedText text={section.items[index]!.text} /></Text>;
+    });
+    const firstId = `${section.id}/first`;
+    return <>
+      <View id={firstId} wrap={(heights?.get(firstId) ?? Infinity) > contentHeight(contentLayout)}>{heading}{blocks[0]}</View>
+      {blocks.slice(1)}
+    </>;
+  }
   return <>
     {heading}
     {section.kind === 'summary' && <Text style={[styles.summary, { backgroundColor: accent, color: accentText }]} orphans={2} widows={2}><LinkedText text={section.text} color={accentText} /></Text>}
     {section.kind === 'notice' && <Text orphans={2} widows={2}>{section.text}</Text>}
-    {section.kind === 'list' && section.items.map((item, index) => <Text key={item.id} style={[styles.compactLine, { marginTop: index === 0 ? 0 : 2 }]} orphans={1} widows={2}><LinkedText text={item.text} /></Text>)}
-    {section.kind === 'entries' && section.entries.map((entry, index) => <Entry key={entry.id} entry={entry} lineHeight={lineHeight} last={index === section.entries.length - 1} contentLayout={contentLayout} styles={styles} />)}
   </>;
 }
 
-export function CvPdfDocument({ data, includePhoto = true, density = 'comfortable', onRender }: { data: CvData; onRender?: (props: unknown) => void } & CvPdfOptions) {
+export function CvPdfDocument({ data, includePhoto = true, density = 'comfortable', onRender, measure = false, heights }: { data: CvData; onRender?: (props: unknown) => void; measure?: boolean; heights?: PdfBlockHeights } & CvPdfOptions) {
   const contentLayout = cvDensityLayouts[density];
   const styles = createStyles(contentLayout);
   const name = getFullName(data.personalDetails);
@@ -77,7 +91,7 @@ export function CvPdfDocument({ data, includePhoto = true, density = 'comfortabl
   const lineHeight = contentLayout.bodyFontSize * contentLayout.bodyLineHeight;
   const hasPhoto = includePhoto && Boolean(data.appearance.photoDataUrl);
   return <Document onRender={onRender} title={name ? `${name} – CV` : 'CV'} author={name} subject="Ansioluettelo" language="fi">
-    <Page size="A4" wrap style={[styles.page, { fontSize: contentLayout.bodyFontSize, lineHeight: contentLayout.bodyLineHeight, fontFamily: data.appearance.fontFamily === 'serif' ? 'Times-Roman' : 'CvBody' }]}>
+    <Page size="A4" wrap={!measure} style={[styles.page, { fontSize: contentLayout.bodyFontSize, lineHeight: contentLayout.bodyLineHeight, fontFamily: data.appearance.fontFamily === 'serif' ? 'Times-Roman' : 'CvBody' }]}>
       <View style={[styles.header, { backgroundColor: accent, color: accentText, minHeight: mm(hasPhoto ? contentLayout.photoHeaderHeightMm : contentLayout.plainHeaderHeightMm) }]} wrap={false}>
         {hasPhoto && <Image src={data.appearance.photoDataUrl} style={styles.photo} />}
         <View style={styles.nameBlock}>
@@ -86,7 +100,7 @@ export function CvPdfDocument({ data, includePhoto = true, density = 'comfortabl
         </View>
       </View>
       {contacts.length > 0 && <Text style={styles.contacts} orphans={2} widows={2}><LinkedText text={contacts.join(' · ')} color="#6F6963" /></Text>}
-      {getCvSections(data).map((section) => <Section key={section.id} section={section} accent={accent} accentText={accentText} lineHeight={lineHeight} contentLayout={contentLayout} styles={styles} />)}
+      {getCvSections(data).map((section) => <Section key={section.id} section={section} accent={accent} accentText={accentText} lineHeight={lineHeight} contentLayout={contentLayout} styles={styles} heights={heights} />)}
     </Page>
   </Document>;
 }

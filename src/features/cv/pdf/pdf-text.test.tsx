@@ -52,6 +52,82 @@ function expectOrder(text: string, expected: string[]) {
   }
 }
 
+function expectIntactEntries(result: Awaited<ReturnType<typeof readPdf>>, data: CvData) {
+  for (const section of getCvSections(data)) {
+    if (section.kind !== 'entries') continue;
+    for (const [index, entry] of section.entries.entries()) {
+      const page = result.pages.find((page) => page.text.includes(entry.title));
+      expect(page, entry.title).toBeDefined();
+      expectOrder(page!.text, [entry.title, ...entry.lines, entry.paragraph].filter(Boolean));
+      if (index === 0) expect(page!.text).toContain(section.heading);
+    }
+  }
+}
+
+async function renderRegressionPages(result: Awaited<ReturnType<typeof readPdf>>, name: string) {
+  const { createCanvas } = require('@napi-rs/canvas');
+  await mkdir('test-results/pdf-pagination', { recursive: true });
+  await writeFile(`test-results/pdf-pagination/${name}.pdf`, result.bytes);
+  for (let number = 1; number <= result.pages.length; number++) {
+    const page = await result.document.getPage(number);
+    const viewport = page.getViewport({ scale: 1.5 });
+    const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
+    await page.render({ canvas, viewport }).promise;
+    await writeFile(`test-results/pdf-pagination/${name}-${number}.png`, canvas.toBuffer('image/png'));
+    const items = result.pages[number - 1]!.items.filter((item) => item.str.trim());
+    // Reading order must agree with the visible top-to-bottom, left-to-right flow.
+    for (let index = 1; index < items.length; index++) {
+      const previous = items[index - 1]!; const current = items[index]!;
+      expect(current.transform[5]).toBeLessThanOrEqual(previous.transform[5] + 1);
+      if (Math.abs(current.transform[5] - previous.transform[5]) < 1) expect(current.transform[4]).toBeGreaterThanOrEqual(previous.transform[4] - 1);
+    }
+    // Every extracted run must also leave visible ink in the rendered page.
+    for (const item of items) {
+      const [x, y] = viewport.convertToViewportPoint(item.transform[4], item.transform[5]);
+      const pixels = canvas.getContext('2d').getImageData(Math.floor(x), Math.floor(y - item.height * 1.5), Math.max(1, Math.ceil(item.width * 1.5)), Math.ceil(item.height * 1.8)).data;
+      let ink = 0;
+      for (let i = 0; i < pixels.length; i += 4) if (pixels[i] < 180 && pixels[i + 1] < 180 && pixels[i + 2] < 180) ink++;
+      expect(ink, item.str).toBeGreaterThan(0);
+    }
+  }
+}
+
+it('epäjärjestyksessä annetut työt tulostuvat vakaasti aikajärjestyksessä muuttamatta lähdettä', async () => {
+  const data = createShortCvFixture();
+  const base = data.workExperience[0]!;
+  data.workExperience = [
+    { ...base, id: 'missing-a', title: 'Puuttuva alku', startDate: '' },
+    { ...base, id: 'old', title: 'Vanha työ', startDate: '2022-01', endDate: '2022-12' },
+    { ...base, id: 'tie-a', title: 'Tasatilanne A' },
+    { ...base, id: 'missing-b', title: 'Virheellinen loppu', endDate: '2026-13' },
+    { ...base, id: 'earlier', title: 'Aiempi aloitus', startDate: '2026-01' },
+    { ...base, id: 'current', title: 'Nykyinen työ', startDate: '2020-01', endDate: '', isCurrent: true },
+    { ...base, id: 'tie-b', title: 'Tasatilanne B' },
+  ];
+  const snapshot = JSON.stringify(data);
+  const result = await readPdf(data);
+  try {
+    expectOrder(result.text, ['Nykyinen työ', 'Tasatilanne A', 'Tasatilanne B', 'Aiempi aloitus', 'Vanha työ', 'Puuttuva alku', 'Virheellinen loppu']);
+    expect(JSON.stringify(data)).toBe(snapshot);
+    expectIntactEntries(result, data);
+    await renderRegressionPages(result, 'chronological');
+  } finally { await result.destroy(); }
+}, 30000);
+
+it.each(['comfortable', 'compact', 'tight'] as const)('kaksisivuinen CV pitää työ- ja koulutusmerkinnät kokonaisina: %s', async (density) => {
+  const data = createShortCvFixture();
+  const work = data.workExperience[0]!;
+  data.workExperience = Array.from({ length: 5 }, (_, index) => ({ ...work, id: `work-${index}`, title: `Tehtävä ${index + 1}`, description: 'Palvelin asiakkaita ja käsittelin tilauksia. '.repeat(5).trim() }));
+  const school = data.education[0]!;
+  data.education = Array.from({ length: 2 }, (_, index) => ({ ...school, id: `school-${index}`, qualification: `Tutkinto ${index + 1}`, description: 'Opiskelin asiakaspalvelua ja taloushallintoa. '.repeat(4).trim() }));
+  const result = await readPdf(data, false, density);
+  try {
+    expect(result.pages).toHaveLength(2);
+    expectIntactEntries(result, data);
+    await renderRegressionPages(result, `two-page-${density}`);
+  } finally { await result.destroy(); }
+}, 30000);
+
 it('vanhat digitaidot löytyvät vain Osaamisesta ja tehtävärivien väli säilyy oikeassa PDF:ssä', async () => {
   const data = createEmptyCv(); data.personalDetails.firstName = 'Olivia'; data.personalDetails.lastName = 'Osaaja';
   data.skills = [{ id: 'excel', name: 'Excel' }];
@@ -118,6 +194,7 @@ it.each([0, 5, 10, 15, 20, 25, 30])('osio-otsikot eivät jää yksin sivun loppu
       const page = result.pages.find((page) => page.text.includes(heading))!;
       expect(page.text.endsWith(heading), heading).toBe(false);
     }
+    expectIntactEntries(result, data);
     expect(result.pages.every((page) => page.text.trim().length > 0)).toBe(true);
   } finally { await result.destroy(); }
 });
@@ -178,6 +255,9 @@ it('generoi oikean monisivuisen A4-PDF:n ja säilyttää kaiken sisällön ATS-l
     }
     expect(result.text.match(/Åsa-Maria/g)).toHaveLength(1);
     expect(result.text).not.toMatch(/Mercuria|CV-esikatselu|Muokkaa tietojasi|Lataa CV PDF-muodossa|aino\.esimerkki/);
+    expectIntactEntries(result, data);
+    await renderRegressionPages(result, 'long');
+    expect(new Set(data.workExperience.map((entry) => result.pages.findIndex((page) => page.text.includes(entry.title)))).size).toBeGreaterThan(1);
   } finally { await result.destroy(); }
 }, 30_000);
 
@@ -222,6 +302,7 @@ it('sivuttaa myös yhden erittäin pitkän luettelokohdan ja säilyttää teksti
       expect(item.transform[4] + item.width).toBeLessThanOrEqual(page.width - 49);
       expect(item.transform[5]).toBeGreaterThanOrEqual(45);
     }
+    await renderRegressionPages(result, 'oversized');
   } finally { await result.destroy(); }
 }, 30_000);
 
