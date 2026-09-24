@@ -1,7 +1,7 @@
 import type { PdfPhotoControl } from './pdf/pdf-options';
 import type { UseFormReturn } from 'react-hook-form';
 import { CvTextRewrite } from './ai/CvTextRewrite';
-import type { CvData } from './cv-model';
+import { summaryMaxLength, type CvData } from './cv-model';
 import { CvHistoryFields } from './CvHistoryFields';
 import { CvAdditionalFields } from './CvAdditionalFields';
 import { CvFinish } from './CvFinish';
@@ -16,11 +16,13 @@ const fields: { name: PersonalField; label: string; placeholder: string; type?: 
   { name: 'professionalTitle', label: 'Osaamistasi kuvaava otsikko', placeholder: 'Asiakaspalvelun ammattilainen', autoComplete: 'organization-title' },
   { name: 'email', label: 'Sähköposti', placeholder: 'aino.esimerkki@example.com', type: 'email', autoComplete: 'email' },
   { name: 'phone', label: 'Puhelinnumero', placeholder: '040 123 4567', type: 'tel', autoComplete: 'tel' },
-  { name: 'city', label: 'Paikkakunta', placeholder: 'Vantaa', autoComplete: 'address-level2' },
   { name: 'linkedIn', label: 'LinkedIn', placeholder: 'https://www.linkedin.com/in/aino-esimerkki', type: 'url' },
 ];
 export function CvForm({ form, data, activeStep, onSelect, pdfPhoto }: { form: UseFormReturn<CvData>; data: CvData; activeStep: number; onSelect: (step: number) => void; pdfPhoto?: PdfPhotoControl }) {
   const { register, formState: { errors } } = form;
+  const summaryError = errors.summary;
+  const summaryLength = data.summary.length;
+  const summaryDescribedBy = ['summary-help', summaryError ? 'summary-error' : ''].filter(Boolean).join(' ');
   return (
     <section className="editor panel" aria-labelledby="editor-title">
       <div className="panel-heading"><p className="eyebrow">OMA CV:SI</p><h2 id="editor-title">Muokkaa tietojasi</h2><p>Kaikki kentät ovat vapaaehtoisia. Esikatselu päivittyy kirjoittaessasi.</p></div>
@@ -40,7 +42,11 @@ export function CvForm({ form, data, activeStep, onSelect, pdfPhoto }: { form: U
         {activeStep === 1 && <fieldset className="summary-fields"><legend>Esittelyteksti</legend>
           <p id="summary-help" className="field-help">Kerro lyhyesti vahvuuksistasi, osaamisestasi ja tavoitteistasi.</p>
           <label htmlFor="summary">Esittely</label>
-          <textarea id="summary" rows={6} placeholder="Olen palveluhenkinen ja huolellinen ammattilainen…" aria-describedby="summary-help" {...register('summary')} />
+          <textarea id="summary" rows={6} maxLength={summaryMaxLength} placeholder="Olen palveluhenkinen ja huolellinen ammattilainen…" aria-invalid={Boolean(summaryError)} aria-describedby={summaryDescribedBy} {...register('summary')} />
+          <div className="summary-meta">
+            {summaryError && <p className="field-error" id="summary-error" role="alert">{summaryError.message}</p>}
+            <p className="summary-counter" id="summary-counter" aria-hidden="true">{summaryLength}/{summaryMaxLength} merkkiä</p>
+          </div>
           <CvTextRewrite form={form} textType="profile" sourceText={data.summary} />
         </fieldset>}
         {activeStep === 2 && <CvHistoryFields key="workExperience" form={form} name="workExperience" />}

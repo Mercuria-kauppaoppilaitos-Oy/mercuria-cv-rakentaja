@@ -235,7 +235,6 @@ test('lataa selaimessa tekstipohjaisen ATS-luettavan PDF:n paikallisesti ja vast
   await page.getByLabel('Sukunimi', { exact: true }).fill('Määttä');
   await page.getByLabel('Osaamistasi kuvaava otsikko').fill('Työpäällikkö');
   await page.getByLabel('Sähköposti').fill('paivi@example.com');
-  await page.getByLabel('Paikkakunta').fill('Jyväskylä');
   await page.getByLabel('LinkedIn').fill('https://www.linkedin.com/in/pdf-fixture');
   await page.getByLabel('Lisää valokuva').setInputFiles(photoPath);
   await page.getByRole('button', { name: 'Käytä kuvaa' }).click();
@@ -278,7 +277,7 @@ test('lataa selaimessa tekstipohjaisen ATS-luettavan PDF:n paikallisesti ja vast
     const text = (await (await document.getPage(1)).getTextContent()).items.filter((item) => 'str' in item).map((item) => item.str).join(' ').replace(/\s+/g, ' ');
     expect(text).toContain(rawSentence);
     let offset = 0;
-    for (const expected of ['Päivi Määttä', 'Työpäällikkö', 'paivi@example.com', 'Jyväskylä', 'ESITTELY', 'Ääkköset: ä ö å Ä Ö Å', 'TYÖKOKEMUS', 'Palvelupäällikkö', 'Testiyritys', 'KOULUTUS', 'Merkonomi']) {
+    for (const expected of ['Päivi Määttä', 'Työpäällikkö', 'paivi@example.com', 'ESITTELY', 'Ääkköset: ä ö å Ä Ö Å', 'TYÖKOKEMUS', 'Palvelupäällikkö', 'Testiyritys', 'KOULUTUS', 'Merkonomi']) {
       const index = text.indexOf(expected, offset); expect(index).toBeGreaterThanOrEqual(offset); offset = index + expected.length;
     }
     const operators = await (await document.getPage(1)).getOperatorList();

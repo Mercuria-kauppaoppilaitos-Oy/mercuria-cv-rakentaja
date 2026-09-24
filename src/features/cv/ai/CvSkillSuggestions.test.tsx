@@ -74,7 +74,7 @@ it('normalizes Unicode and case without changing existing names', () => {
 it('fingerprint ignores private fields, row IDs and empty rows; source changes produce another key', async () => {
   const data = createShortCvFixture(); const original = getSkillSource(data); const key = await skillSourceKey(original);
   data.personalDetails.firstName = 'Private'; data.personalDetails.lastName = 'Secret'; data.personalDetails.email = 'secret@example.com';
-  data.personalDetails.phone = '999'; data.personalDetails.city = 'Private city'; data.personalDetails.linkedIn = 'https://www.linkedin.com/in/private';
+  data.personalDetails.phone = '999'; data.personalDetails.linkedIn = 'https://www.linkedin.com/in/private';
   data.appearance.photoDataUrl = 'data:image/jpeg;base64,private'; data.references[0]!.name = 'Hidden reference';
   data.workExperience[0]!.id = 'new-id'; data.workExperience[0]!.employer = 'Private employer'; data.workExperience[0]!.startDate = '1990-01';
   data.education[0]!.institution = 'Private institution'; data.workExperience.push({ ...data.workExperience[0]!, id: 'blank', title: '', description: '' });
