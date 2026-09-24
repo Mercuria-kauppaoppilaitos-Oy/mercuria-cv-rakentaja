@@ -3,11 +3,11 @@
 exports[`kaikki tiheydet säilyttävät tekstin, sivumäärän ja otsikot: long photo=false 1`] = `
 {
   "counts": [
-    3,
+    2,
     2,
     2,
   ],
-  "density": "compact",
+  "density": "comfortable",
   "pages": 2,
 }
 `;
@@ -15,11 +15,11 @@ exports[`kaikki tiheydet säilyttävät tekstin, sivumäärän ja otsikot: long 
 exports[`kaikki tiheydet säilyttävät tekstin, sivumäärän ja otsikot: long photo=true 1`] = `
 {
   "counts": [
-    3,
+    2,
     2,
     2,
   ],
-  "density": "compact",
+  "density": "comfortable",
   "pages": 2,
 }
 `;
