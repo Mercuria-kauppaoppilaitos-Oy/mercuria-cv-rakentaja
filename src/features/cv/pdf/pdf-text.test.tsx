@@ -187,7 +187,7 @@ it('pitkä Kielitaito-osio jakautuu sivuille ja otsikko pysyy ensimmäisen sisä
 
 it.each([0, 5, 10, 15, 20, 25, 30])('osio-otsikot eivät jää yksin sivun loppuun eri sivurajoilla: %s', async (extra) => {
   const data = createShortCvFixture();
-  data.workExperience[0]!.description += ` ${'Olen huolellinen ja palveluhenkinen sekä haluan oppia työssä uusia taitoja.'.repeat(extra)}`.trimEnd();
+  data.personalDetails.professionalTitle += `${extra ? ' – ' : ''}${'Olen huolellinen ja palveluhenkinen sekä haluan oppia työssä uusia taitoja.'.repeat(extra)}`.trimEnd();
   const result = await readPdf(data);
   try {
     for (const heading of ['ESITTELY', 'TYÖKOKEMUS', 'KOULUTUS', 'OSAAMINEN', 'KIELITAITO']) {
