@@ -22,7 +22,7 @@ export function CvForm({ form, data, activeStep, onSelect, pdfPhoto }: { form: U
   const { register, formState: { errors } } = form;
   const summaryError = errors.summary;
   const summaryLength = data.summary.length;
-  const summaryDescribedBy = ['summary-help', 'summary-counter', summaryError ? 'summary-error' : ''].filter(Boolean).join(' ');
+  const summaryDescribedBy = ['summary-help', summaryError ? 'summary-error' : ''].filter(Boolean).join(' ');
   return (
     <section className="editor panel" aria-labelledby="editor-title">
       <div className="panel-heading"><p className="eyebrow">OMA CV:SI</p><h2 id="editor-title">Muokkaa tietojasi</h2><p>Kaikki kentät ovat vapaaehtoisia. Esikatselu päivittyy kirjoittaessasi.</p></div>
@@ -45,7 +45,7 @@ export function CvForm({ form, data, activeStep, onSelect, pdfPhoto }: { form: U
           <textarea id="summary" rows={6} maxLength={summaryMaxLength} placeholder="Olen palveluhenkinen ja huolellinen ammattilainen…" aria-invalid={Boolean(summaryError)} aria-describedby={summaryDescribedBy} {...register('summary')} />
           <div className="summary-meta">
             {summaryError && <p className="field-error" id="summary-error" role="alert">{summaryError.message}</p>}
-            <p className="summary-counter" id="summary-counter" aria-live="polite">{summaryLength}/{summaryMaxLength} merkkiä</p>
+            <p className="summary-counter" id="summary-counter" aria-hidden="true">{summaryLength}/{summaryMaxLength} merkkiä</p>
           </div>
           <CvTextRewrite form={form} textType="profile" sourceText={data.summary} />
         </fieldset>}
