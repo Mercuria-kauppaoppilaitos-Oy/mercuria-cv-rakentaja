@@ -87,7 +87,7 @@ export function CvPdfDocument({ data, includePhoto = true, density = 'comfortabl
   const title = data.personalDetails.professionalTitle.trim();
   const accent = isHexColor(data.appearance.accentColor) ? data.appearance.accentColor : defaultAccentColor;
   const accentText = contrastingText(accent);
-  const contacts = [data.personalDetails.email, data.personalDetails.phone, data.personalDetails.city, data.personalDetails.linkedIn].map((value) => value.trim()).filter(Boolean);
+  const contacts = [data.personalDetails.email, data.personalDetails.phone, data.personalDetails.linkedIn].map((value) => value.trim()).filter(Boolean);
   const lineHeight = contentLayout.bodyFontSize * contentLayout.bodyLineHeight;
   const hasPhoto = includePhoto && Boolean(data.appearance.photoDataUrl);
   return <Document onRender={onRender} title={name ? `${name} – CV` : 'CV'} author={name} subject="Ansioluettelo" language="fi">

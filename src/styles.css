@@ -27,6 +27,9 @@ input:disabled { background: #edf0f3; color: #626c76; cursor: not-allowed; }
 input[aria-invalid='true'], select[aria-invalid='true'] { border-color: #a23b30; }
 .field-error { color: #a23b30; font-size: .8rem; margin-top: .4rem; }
 .field-help { font-size: .85rem; margin-bottom: 1rem; }
+.summary-meta { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-top: .4rem; }
+.summary-meta .field-error { margin-top: 0; }
+.summary-counter { margin-left: auto; font-size: .8rem; color: #697786; text-align: right; white-space: nowrap; }
 .remove-button { background: #fff; color: #8a3028; margin-top: 1rem; }
 .remove-button:hover { background: #fff3f1; }
 .checkbox-field { display: flex; gap: .65rem; align-items: center; }
@@ -121,6 +124,7 @@ button:disabled { cursor: default; opacity: .5; }
   .form-column, .preview-column { padding: 1rem; overflow: visible; }
   .preview-column { border-left: 0; }
   .field-grid { grid-template-columns: 1fr; }
+  .summary-meta { flex-wrap: wrap; }
   .intro { margin-bottom: 1rem; }
   .brand { flex-wrap: wrap; gap: .65rem; }
   .brand img { width: 150px; }

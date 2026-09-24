@@ -218,7 +218,7 @@ it('generoi oikean monisivuisen A4-PDF:n ja säilyttää kaiken sisällön ATS-l
     }
     expectOrder(result.text, [
       'Åsa-Maria Ääkkönen-Östergård Pitkänimi', data.personalDetails.professionalTitle,
-      'test@example.com', '040 000 0000', 'Vantaa', data.personalDetails.linkedIn,
+      'test@example.com', '040 000 0000', data.personalDetails.linkedIn,
       'ESITTELY', 'Ääkköset: ä ö å Ä Ö Å', 'Esimerkki: Päivi Määttä, Jyväskylä, työpäällikkö',
       'TYÖKOKEMUS', ...data.workExperience.map((entry) => entry.title),
       'KOULUTUS', ...data.education.map((entry) => entry.qualification),
@@ -570,7 +570,7 @@ it.each(['comfortable', 'compact', 'tight', 'long'] as const)('kaikki näkyvät 
   data.workExperience[1]!.title = 'Harjoittelija ';
   data.references[0]!.name = 'Hanna Åäkkönen';
   const expected = [getFullName(data.personalDetails), data.personalDetails.professionalTitle,
-    [data.personalDetails.email, data.personalDetails.phone, data.personalDetails.city, data.personalDetails.linkedIn].filter(Boolean).join(' · '),
+    [data.personalDetails.email, data.personalDetails.phone, data.personalDetails.linkedIn].filter(Boolean).join(' · '),
     ...getCvSections(data).flatMap((section) => [section.heading, ...(section.kind === 'entries' ? section.entries.flatMap((entry) => [entry.title, ...entry.lines, entry.paragraph])
       : section.kind === 'list' ? section.items.map((item) => item.text) : [section.text])]),
   ].join(' ').replace(/\s+/g, ' ').trim();

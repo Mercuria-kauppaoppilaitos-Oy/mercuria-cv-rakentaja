@@ -11,7 +11,7 @@ export function preparePdfInput(data: CvData, includePhoto = true) {
     layoutVersion: pdfLayoutVersion,
     densityPolicy: ['comfortable', 'compact', 'tight'],
     name: getFullName(snapshot.personalDetails), title: snapshot.personalDetails.professionalTitle.trim(),
-    contacts: [snapshot.personalDetails.email, snapshot.personalDetails.phone, snapshot.personalDetails.city, snapshot.personalDetails.linkedIn].map((value) => value.trim()).filter(Boolean),
+    contacts: [snapshot.personalDetails.email, snapshot.personalDetails.phone, snapshot.personalDetails.linkedIn].map((value) => value.trim()).filter(Boolean),
     sections: getCvSections(snapshot), accent: snapshot.appearance.accentColor, fontFamily: snapshot.appearance.fontFamily,
     includePhoto, photo: includePhoto ? snapshot.appearance.photoDataUrl : '',
   }, (key, value: unknown) => key === 'id' ? undefined : value);

@@ -29,6 +29,26 @@ it('tallentaa ja palauttaa istuntoluonnoksen väreineen ja kuvineen', () => {
   expect(loadDraft()).toMatchObject({ data, restored: true, persistent: false });
   expect(JSON.parse(sessionStorage.getItem(draftStorageKey)!).schemaVersion).toBe(4);
 });
+it('palauttaa vanhan luonnoksen vaikka poistettu paikkakunta-kenttä olisi vielä tallennettu', () => {
+  const data = createEmptyCv();
+  data.personalDetails.firstName = 'Aino';
+  sessionStorage.setItem(draftStorageKey, JSON.stringify({
+    schemaVersion: 4,
+    persistent: false,
+    data: { ...data, personalDetails: { ...data.personalDetails, city: 'Vantaa' } },
+  }));
+  expect(loadDraft()).toMatchObject({ data, restored: true, persistent: false, error: '' });
+});
+it('lyhentää vanhan liian pitkän esittelyn palautettaessa luonnoksen', () => {
+  const data = createEmptyCv();
+  sessionStorage.setItem(draftStorageKey, JSON.stringify({
+    schemaVersion: 4,
+    persistent: false,
+    data: { ...data, summary: 'x'.repeat(305) },
+  }));
+  expect(loadDraft()).toMatchObject({ restored: true, persistent: false, error: '' });
+  expect(loadDraft().data.summary).toBe('x'.repeat(300));
+});
 it('siirtää vanhan pysyvän luonnoksen istuntoon vasta onnistuneen tallennuksen jälkeen', () => {
   const data = createEmptyCv(); data.personalDetails.firstName = 'Aino';
   localStorage.setItem(draftStorageKey, JSON.stringify({ schemaVersion: 3, persistent: true, data }));

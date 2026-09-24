@@ -2,7 +2,7 @@ import { createEmptyCv } from '../features/cv/cv-model';
 /** Synthetic short regression CV; not copied from a user's browser draft. */
 export function createShortCvFixture() {
   const data = createEmptyCv();
-  data.personalDetails = { firstName: 'Olivia', lastName: 'Osaaja', professionalTitle: 'Liiketoiminnan opiskelija', email: 'olivia@example.com', phone: '040 123 4567', city: 'Vantaa', linkedIn: 'https://www.linkedin.com/in/oliviaosaaja' };
+  data.personalDetails = { firstName: 'Olivia', lastName: 'Osaaja', professionalTitle: 'Liiketoiminnan opiskelija', email: 'olivia@example.com', phone: '040 123 4567', linkedIn: 'https://www.linkedin.com/in/oliviaosaaja' };
   data.summary = 'Olen huolellinen liiketoiminnan opiskelija. Etsin harjoittelupaikkaa, jossa voin käyttää asiakaspalveluosaamistani ja oppia taloushallintoa.';
   data.workExperience = [
     { id: 'short-work-1', title: 'Myymäläharjoittelija', employer: 'Esimerkkikauppa', location: '', startDate: '2026-09', endDate: '2026-11', isCurrent: false, description: 'Hyllytys\nSiisteys\nPalvelin asiakkaita kassalla.' },
@@ -20,8 +20,8 @@ export function createShortCvFixture() {
 /** Synthetic, long CV shared by form and real PDF text-extraction tests. */
 export function createLongCvFixture() {
   const data = createEmptyCv();
-  data.personalDetails = { firstName: 'Åsa-Maria', lastName: 'Ääkkönen-Östergård Pitkänimi', professionalTitle: 'Asiakaspalvelun ja verkkokaupan ammattilainen', email: 'test@example.com', phone: '040 000 0000', city: 'Vantaa', linkedIn: 'https://www.linkedin.com/in/test-fixture' };
-  data.summary = ['Ääkköset: ä ö å Ä Ö Å', 'Esimerkki: Päivi Määttä, Jyväskylä, työpäällikkö', ...Array(18).fill('Olen huolellinen, yhteistyökykyinen ja palveluhenkinen. Ääkköset ä, ö ja å säilyvät tekstissä.')].join('\n');
+  data.personalDetails = { firstName: 'Åsa-Maria', lastName: 'Ääkkönen-Östergård Pitkänimi', professionalTitle: 'Asiakaspalvelun ja verkkokaupan ammattilainen', email: 'test@example.com', phone: '040 000 0000', linkedIn: 'https://www.linkedin.com/in/test-fixture' };
+  data.summary = ['Ääkköset: ä ö å Ä Ö Å', 'Esimerkki: Päivi Määttä, Jyväskylä, työpäällikkö', 'Olen huolellinen, yhteistyökykyinen ja palveluhenkinen.', 'Kehitän asiakaspalvelua ja verkkokaupan arkea tavoitteellisesti.'].join('\n');
   data.workExperience = Array.from({ length: 8 }, (_, index) => ({ id: `work-${index}`, title: `Myyjä ja työharjoittelija ${index + 1}`, employer: 'Esimerkki Oy', location: 'Helsinki', startDate: '2023-08', endDate: '2024-05', isCurrent: false, description: 'Palvelin asiakkaita\nKäsittelin verkkokaupan tilauksia\nTuotin sosiaalisen median sisältöä' }));
   data.education = Array.from({ length: 3 }, (_, index) => ({ id: `education-${index}`, qualification: `Liiketoiminnan koulutus ${index + 1}`, institution: 'Esimerkkioppilaitos', location: 'Vantaa', startDate: '2021-08', endDate: '2023-05', isCurrent: false, description: 'Asiakaspalvelu, myyntityö ja verkkokauppa' }));
   data.skills = [{ id: 'skill', name: 'Asiakaspalvelu ja myyntityö' }];

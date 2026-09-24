@@ -11,10 +11,11 @@ const optionalLinkedIn = z.string().refine((value) => {
 }, 'Anna LinkedIn-osoite muodossa https://www.linkedin.com/in/nimi.');
 const dateRangeSchema = z.object({ startDate: z.string(), endDate: z.string(), isCurrent: z.boolean() });
 export const languageLevels = ['Äidinkieli', 'Erinomainen', 'Sujuva', 'Hyvä', 'Tyydyttävä', 'Perusteet'] as const;
+export const summaryMaxLength = 300;
 
 export const cvSchema = z.object({
-  personalDetails: z.object({ firstName: z.string(), lastName: z.string(), professionalTitle: z.string(), email: optionalEmail, phone: z.string(), city: z.string(), linkedIn: optionalLinkedIn }),
-  summary: z.string(),
+  personalDetails: z.object({ firstName: z.string(), lastName: z.string(), professionalTitle: z.string(), email: optionalEmail, phone: z.string(), linkedIn: optionalLinkedIn }),
+  summary: z.string().max(summaryMaxLength, `Esittely saa olla enintään ${summaryMaxLength} merkkiä.`),
   workExperience: z.array(dateRangeSchema.extend({ id: z.string(), employer: z.string(), title: z.string(), location: z.string(), description: z.string() })),
   education: z.array(dateRangeSchema.extend({ id: z.string(), institution: z.string(), qualification: z.string(), location: z.string(), description: z.string() })),
   skills: z.array(z.object({ id: z.string(), name: z.string() })),
@@ -48,7 +49,7 @@ export function createEmptyEducation(): CvData['education'][number] {
 }
 export function createEmptyCv(): CvData {
   return {
-    personalDetails: { firstName: '', lastName: '', professionalTitle: '', email: '', phone: '', city: '', linkedIn: '' },
+    personalDetails: { firstName: '', lastName: '', professionalTitle: '', email: '', phone: '', linkedIn: '' },
     summary: '', workExperience: [], education: [], skills: [], languages: [], certifications: [], references: [], referencesDisplay: 'contact',
     template: 'single-column', appearance: { fontFamily: 'sans-serif', fontSize: 11, lineHeight: 1.4, accentColor: defaultAccentColor, photoDataUrl: '' },
   };

@@ -21,13 +21,13 @@ describe('CV-rakentaja', () => {
     expect(screen.getByText('Luo muutamassa minuutissa CV, jonka rekrytointijärjestelmät ja tekoäly pystyvät lukemaan.')).toBeVisible();
   });
 
-  it('päivittää kaikki kahdeksan kenttää esikatseluun ilman lähetystä', async () => {
+  it('päivittää kaikki seitsemän perustietokenttää esikatseluun ilman lähetystä', async () => {
     const user = userEvent.setup();
     render(<App />);
     const values = [
       ['Etunimi', 'Meri'], ['Sukunimi', 'Virtanen'], ['Osaamistasi kuvaava otsikko', 'Myyntineuvoja'],
       ['Sähköposti', 'meri@example.com'], ['Puhelinnumero', '+358 40 987 6543'],
-      ['Paikkakunta', 'Helsinki'], ['LinkedIn', 'https://www.linkedin.com/in/meri-virtanen'],
+      ['LinkedIn', 'https://www.linkedin.com/in/meri-virtanen'],
       ['Esittely', 'Autan asiakkaita löytämään sopivat ratkaisut.\nOpin mielelläni uutta.'],
     ] as const;
     const preview = within(screen.getByRole('article', { name: 'Ansioluettelon esikatselu' }));
@@ -75,6 +75,20 @@ describe('CV-rakentaja', () => {
     await user.clear(linkedIn);
     await user.type(linkedIn, 'https://www.linkedin.com/in/meri');
     expect(linkedIn).toHaveAttribute('aria-invalid', 'false');
+  });
+
+  it('näyttää Esittely-kentässä reaaliaikaisen merkkilaskurin ja rajaa syötteen 300 merkkiin', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await selectStep(user, 'Esittely');
+    const summary = screen.getByRole('textbox', { name: 'Esittely' });
+    expect(screen.getByText('0/300 merkkiä')).toBeVisible();
+    await user.type(summary, 'Opin uutta.');
+    expect(screen.getByText('11/300 merkkiä')).toBeVisible();
+    await user.clear(summary);
+    await user.type(summary, 'a'.repeat(305));
+    expect(summary).toHaveValue('a'.repeat(300));
+    expect(screen.getByText('300/300 merkkiä')).toBeVisible();
   });
 });
 

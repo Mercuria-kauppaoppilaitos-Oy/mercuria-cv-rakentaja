@@ -1,10 +1,13 @@
 import { z } from 'zod';
 import { defaultAccentColor, isHexColor } from './color-utils';
-import { createEmptyCv, cvSchema, type CvData } from './cv-model';
+import { createEmptyCv, cvSchema, summaryMaxLength, type CvData } from './cv-model';
 const draftSchemaVersion = 4;
 
 export const draftStorageKey = 'mercuria-cv-draft-v1';
-const storedCvSchema = cvSchema.extend({ appearance: cvSchema.shape.appearance.extend({ accentColor: z.preprocess((value) => typeof value === 'string' && isHexColor(value) ? value : defaultAccentColor, cvSchema.shape.appearance.shape.accentColor) }) });
+const storedCvSchema = cvSchema.extend({
+  summary: z.preprocess((value) => typeof value === 'string' ? value.slice(0, summaryMaxLength) : value, cvSchema.shape.summary),
+  appearance: cvSchema.shape.appearance.extend({ accentColor: z.preprocess((value) => typeof value === 'string' && isHexColor(value) ? value : defaultAccentColor, cvSchema.shape.appearance.shape.accentColor) }),
+});
 const legacyCvSchema = storedCvSchema.extend({ digitalSkills: z.array(z.object({ id: z.string(), name: z.string(), proficiency: z.enum(['', 'Perusteet', 'Hyvä', 'Edistynyt']) })).optional() });
 const envelopeSchema = z.discriminatedUnion('schemaVersion', [
   z.object({ schemaVersion: z.literal(4), persistent: z.boolean(), data: storedCvSchema }),
